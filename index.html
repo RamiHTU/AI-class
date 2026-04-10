@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Class</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Georgia, serif;
+      background: #f5f4f0;
+      color: #1a1a1a;
+      min-height: 100vh;
+      padding: 3rem 1.5rem;
+    }
+
+    header {
+      max-width: 800px;
+      margin: 0 auto 3rem;
+      border-bottom: 2px solid #1a1a1a;
+      padding-bottom: 1.5rem;
+    }
+
+    header h1 {
+      font-size: 1.8rem;
+      font-weight: normal;
+      letter-spacing: 0.02em;
+    }
+
+    header p {
+      margin-top: 0.4rem;
+      color: #555;
+      font-size: 0.95rem;
+    }
+
+    .grid {
+      max-width: 800px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid #d4d2cc;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .card .tag {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #888;
+    }
+
+    .card h2 {
+      font-size: 1rem;
+      font-weight: bold;
+      line-height: 1.4;
+    }
+
+    .card p {
+      font-size: 0.88rem;
+      color: #444;
+      line-height: 1.6;
+      flex: 1;
+    }
+
+    .card a {
+      display: inline-block;
+      font-size: 0.82rem;
+      color: #1a1a1a;
+      text-decoration: underline;
+      margin-top: 0.25rem;
+    }
+
+    .card a:hover { color: #555; }
+
+    /* Placeholder card */
+    .card.placeholder {
+      background: #f5f4f0;
+      border: 1px dashed #bbb;
+      color: #aaa;
+    }
+
+    .card.placeholder h2,
+    .card.placeholder p { color: #bbb; }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>AI Class</h1>
+    <p>Course materials and homework submissions</p>
+  </header>
+
+  <div class="grid">
+
+    <!-- Card 1 -->
+    <div class="card">
+      <span class="tag">Gradient Descent brief</span>
+      <h2>Gradient Descent</h2>
+      <p>Exploring Gradient Descent.</p>
+      <a href="#">View→</a>
+    </div>
+
+    <div class="card">
+      <span class="tag">Gradient Descent more details</span>
+      <h2>Gradient Descent with more details</h2>
+      <p>Exploring Gradient Descent in greater depth.</p>
+      <a href="#">View →</a>
+    </div>
+
+    <!-- Card 2 
+    <div class="card">
+      <span class="tag">Assignment 2</span>
+      <h2>Regression Analysis</h2>
+      <p>Hands-on practice with simple linear regression using a housing dataset and residual analysis.</p>
+      <a href="#">View assignment →</a>
+    </div>
+    -->
+
+    <!-- Placeholder 
+    <div class="card placeholder">
+      <span class="tag">Assignment 3</span>
+      <h2>Coming Soon</h2>
+      <p>This assignment has not been posted yet. Check back later.</p>
+    </div>
+    -->
+
+  </div>
+
+</body>
+</html>
