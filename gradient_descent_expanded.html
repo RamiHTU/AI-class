@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gradient Descent — Interactive Explainer</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #161922;
+    --surface2: #1e2330;
+    --border: #2a3045;
+    --accent: #4fffb0;
+    --accent2: #ff6b6b;
+    --accent3: #ffd166;
+    --purple: #a78bfa;
+    --text: #e8eaf0;
+    --text-muted: #7a84a0;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); font-weight: 300; line-height: 1.75; min-height: 100vh; }
+
+  /* NAV */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(13,15,20,0.95); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 1.5rem; height: 54px; overflow-x: auto; gap: 0;
+  }
+  .nav-brand { font-family: var(--mono); font-size: 0.78rem; color: var(--accent); font-weight: 600; margin-right: 1.5rem; white-space: nowrap; letter-spacing: 0.04em; }
+  .nav-item {
+    padding: 0 0.9rem; height: 54px; display: flex; align-items: center;
+    font-family: var(--mono); font-size: 0.68rem; color: var(--text-muted);
+    cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap;
+    transition: color 0.2s, border-color 0.2s; letter-spacing: 0.04em;
+  }
+  .nav-item:hover { color: var(--text); }
+  .nav-item.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* PROGRESS */
+  .progress-bar-wrap { height: 3px; background: var(--border); position: fixed; top: 54px; left: 0; right: 0; z-index: 99; }
+  .progress-bar-fill { height: 100%; background: var(--accent); transition: width 0.4s; }
+
+  /* SECTIONS */
+  section { max-width: 900px; margin: 0 auto; padding: 5.5rem 2rem 5rem; display: none; }
+  section.visible { display: block; }
+
+  /* TYPOGRAPHY */
+  .section-label { font-family: var(--mono); font-size: 0.67rem; color: var(--accent); letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 0.5rem; }
+  .sec-num { font-family: var(--mono); font-size: 3.5rem; font-weight: 600; color: var(--border); line-height: 1; margin-bottom: -0.4rem; }
+  h1 { font-family: var(--mono); font-size: clamp(1.7rem, 4vw, 2.5rem); font-weight: 600; line-height: 1.2; margin-bottom: 1rem; }
+  h2 { font-family: var(--mono); font-size: 1rem; font-weight: 600; color: var(--accent); margin: 2rem 0 0.7rem; border-left: 3px solid var(--accent); padding-left: 0.8rem; }
+  h3 { font-family: var(--mono); font-size: 0.88rem; font-weight: 600; color: var(--accent3); margin: 1.2rem 0 0.4rem; }
+  p { color: #c0c8dc; margin-bottom: 0.9rem; font-size: 0.93rem; }
+  strong { color: var(--text); font-weight: 600; }
+  em { color: var(--accent3); font-style: normal; }
+
+  /* CARDS */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.4rem; margin: 1rem 0; }
+  .card-green { border-left: 3px solid var(--accent); background: rgba(79,255,176,0.04); }
+  .card-yellow { border-left: 3px solid var(--accent3); background: rgba(255,209,102,0.04); }
+  .card-red { border-left: 3px solid var(--accent2); background: rgba(255,107,107,0.04); }
+  .card-purple { border-left: 3px solid var(--purple); background: rgba(167,139,250,0.04); }
+
+  /* FORMULA */
+  .formula { background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: 1.1rem 1.5rem; font-family: var(--mono); font-size: 1.05rem; margin: 0.8rem 0; text-align: center; color: var(--accent3); }
+  .formula-sm { font-size: 0.88rem; padding: 0.7rem 1.2rem; }
+  .formula-annotated { display: flex; align-items: flex-start; justify-content: center; gap: 0.4rem; flex-wrap: wrap; padding: 1.5rem; font-size: 1.25rem; }
+  .formula-annotated .part { display: inline-flex; flex-direction: column; align-items: center; }
+  .formula-annotated .lbl { font-size: 0.6rem; color: var(--text-muted); letter-spacing: 0.08em; margin-top: 0.2rem; text-align: center; max-width: 80px; }
+
+  /* CANVAS */
+  .canvas-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; margin: 1rem 0; }
+  canvas { display: block; width: 100%; border-radius: 4px; }
+  .canvas-hint { font-family: var(--mono); font-size: 0.68rem; color: var(--text-muted); text-align: center; margin-top: 0.5rem; }
+
+  /* CONTROLS */
+  .controls { display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end; margin: 0.8rem 0; }
+  .control-group { display: flex; flex-direction: column; gap: 0.35rem; flex: 1; min-width: 160px; }
+  .control-group label { font-family: var(--mono); font-size: 0.69rem; color: var(--text-muted); letter-spacing: 0.05em; }
+  .control-group label .val { color: var(--accent3); font-weight: 600; }
+  input[type=range] { -webkit-appearance: none; width: 100%; height: 4px; background: var(--border); border-radius: 2px; outline: none; cursor: pointer; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 15px; height: 15px; background: var(--accent); border-radius: 50%; cursor: pointer; transition: transform 0.15s; }
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.25); }
+
+  .btn { font-family: var(--mono); font-size: 0.73rem; letter-spacing: 0.05em; padding: 0.5rem 1.1rem; border: 1px solid var(--accent); color: var(--accent); background: transparent; border-radius: 4px; cursor: pointer; transition: background 0.2s, color 0.2s; }
+  .btn:hover { background: var(--accent); color: var(--bg); }
+  .btn-row { display: flex; gap: 0.6rem; flex-wrap: wrap; margin: 1rem 0; }
+
+  /* STATUS BAR */
+  .status-bar { font-family: var(--mono); font-size: 0.7rem; color: var(--text-muted); background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; padding: 0.5rem 1rem; display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
+  .status-bar .val { color: var(--accent3); font-weight: 600; }
+
+  /* GRID */
+  .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 1rem 0; }
+  .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 0.8rem; margin: 1rem 0; }
+
+  /* ANALOGY ITEMS */
+  .analogy-item { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; }
+  .analogy-item .icon { font-size: 1.5rem; margin-bottom: 0.4rem; }
+  .analogy-item .concept { font-family: var(--mono); font-size: 0.7rem; color: var(--accent); letter-spacing: 0.08em; margin-bottom: 0.25rem; }
+  .analogy-item .meaning { font-size: 0.83rem; color: #c0c8dc; }
+
+  /* STEPS LIST */
+  .steps-list { list-style: none; margin: 0.8rem 0; }
+  .steps-list li { display: flex; gap: 1rem; align-items: flex-start; padding: 0.7rem 0; border-bottom: 1px solid var(--border); }
+  .steps-list li:last-child { border-bottom: none; }
+  .step-num { font-family: var(--mono); font-size: 0.85rem; color: var(--accent); font-weight: 600; min-width: 26px; }
+  .step-text { font-size: 0.88rem; color: #c0c8dc; line-height: 1.6; }
+  .step-formula { font-family: var(--mono); font-size: 0.8rem; color: var(--accent3); display: block; margin-top: 0.3rem; }
+
+  /* LR SCENARIOS */
+  .lr-scenarios { display: grid; grid-template-columns: repeat(3,1fr); gap: 0.8rem; margin: 1rem 0; }
+  .lr-scenario { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.9rem; cursor: pointer; transition: border-color 0.2s; text-align: center; }
+  .lr-scenario:hover { border-color: var(--accent); }
+  .lr-scenario.active { border-color: var(--accent); background: rgba(79,255,176,0.06); }
+  .lr-scenario .lr-val { font-family: var(--mono); font-size: 1rem; color: var(--accent3); font-weight: 600; }
+  .lr-scenario .lr-label { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.2rem; }
+
+  /* MCQ */
+  .mcq-section { margin-top: 2.5rem; border-top: 1px solid var(--border); padding-top: 1.5rem; }
+  .mcq-title { font-family: var(--mono); font-size: 0.7rem; color: var(--accent); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 1.2rem; display: flex; align-items: center; gap: 0.6rem; }
+  .mcq-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .mcq-item { margin-bottom: 1.2rem; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.2rem; }
+  .mcq-q { font-size: 0.9rem; color: var(--text); margin-bottom: 0.8rem; line-height: 1.6; }
+  .mcq-q .qnum { font-family: var(--mono); color: var(--accent); font-weight: 600; margin-right: 0.4rem; }
+  .mcq-opts { display: flex; flex-direction: column; gap: 0.45rem; }
+  .mcq-opt { font-size: 0.85rem; padding: 0.6rem 0.9rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 4px; cursor: pointer; color: #c0c8dc; transition: border-color 0.2s, background 0.2s; text-align: left; font-family: var(--sans); }
+  .mcq-opt:hover:not(:disabled) { border-color: var(--accent); background: rgba(79,255,176,0.05); }
+  .mcq-opt.correct { border-color: var(--accent) !important; background: rgba(79,255,176,0.1) !important; color: var(--accent) !important; }
+  .mcq-opt.wrong { border-color: var(--accent2) !important; background: rgba(255,107,107,0.1) !important; color: var(--accent2) !important; }
+  .mcq-feedback { font-size: 0.82rem; padding: 0.6rem 0.9rem; border-radius: 4px; margin-top: 0.6rem; display: none; line-height: 1.5; }
+  .mcq-feedback.show { display: block; }
+  .mcq-feedback.ok { background: rgba(79,255,176,0.08); color: var(--accent); border: 1px solid rgba(79,255,176,0.3); }
+  .mcq-feedback.bad { background: rgba(255,107,107,0.08); color: #fca5a5; border: 1px solid rgba(255,107,107,0.3); }
+  .mcq-score { font-family: var(--mono); font-size: 0.75rem; color: var(--text-muted); text-align: right; margin-top: 0.5rem; }
+  .mcq-score .val { color: var(--accent3); }
+
+  /* VARIANT GRID */
+  .variant-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.1rem; }
+  .variant-card .v-name { font-family: var(--mono); font-size: 0.75rem; color: var(--accent); font-weight: 600; margin-bottom: 0.5rem; }
+  .variant-card .v-desc { font-size: 0.83rem; color: #c0c8dc; margin-bottom: 0.5rem; }
+  .v-badge { display: inline-block; font-family: var(--mono); font-size: 0.62rem; padding: 0.15rem 0.5rem; border-radius: 3px; margin-right: 0.3rem; }
+  .v-badge.pro { background: rgba(79,255,176,0.15); color: var(--accent); border: 1px solid rgba(79,255,176,0.3); }
+  .v-badge.con { background: rgba(255,107,107,0.15); color: var(--accent2); border: 1px solid rgba(255,107,107,0.3); }
+
+  /* HERO */
+  .hero { padding-top: 6.5rem; }
+  .hero-tag { display: inline-block; font-family: var(--mono); font-size: 0.67rem; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); border: 1px solid rgba(79,255,176,0.3); border-radius: 3px; padding: 0.2rem 0.6rem; margin-bottom: 1rem; }
+  .hero h1 { font-size: clamp(2rem, 5.5vw, 3.2rem); }
+  .hero p { font-size: 1rem; max-width: 560px; }
+  .hero-btns { display: flex; gap: 0.8rem; flex-wrap: wrap; margin-top: 2rem; }
+  .hero-btn { font-family: var(--mono); font-size: 0.76rem; letter-spacing: 0.05em; padding: 0.65rem 1.3rem; border-radius: 4px; cursor: pointer; transition: 0.2s; }
+  .hero-btn-primary { background: var(--accent); color: var(--bg); border: none; font-weight: 600; }
+  .hero-btn-primary:hover { opacity: 0.85; }
+  .hero-btn-secondary { border: 1px solid var(--border); background: transparent; color: var(--text-muted); }
+  .hero-btn-secondary:hover { border-color: var(--text-muted); color: var(--text); }
+
+  /* NAV FOOTER */
+  .section-nav { display: flex; justify-content: space-between; margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border); flex-wrap: wrap; gap: 0.5rem; }
+
+  /* TABLE */
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; margin: 0.8rem 0; }
+  th { font-family: var(--mono); font-size: 0.68rem; color: var(--text-muted); padding: 0.5rem 0.8rem; text-align: left; border-bottom: 1px solid var(--border); letter-spacing: 0.06em; }
+  td { padding: 0.55rem 0.8rem; border-bottom: 1px solid rgba(42,48,69,0.5); color: #c0c8dc; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+
+  /* CONVERGENCE CRITERIA */
+  .criteria-item { display: flex; gap: 0.8rem; align-items: flex-start; padding: 0.7rem 0; border-bottom: 1px solid var(--border); }
+  .criteria-item:last-child { border-bottom: none; }
+  .criteria-num { font-family: var(--mono); font-size: 0.8rem; color: var(--accent3); font-weight: 600; min-width: 24px; }
+
+  @media (max-width: 600px) {
+    .lr-scenarios { grid-template-columns: 1fr; }
+    nav { padding: 0 0.5rem; }
+    .formula-annotated { font-size: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressBar"></div></div>
+
+<nav id="mainNav">
+  <div class="nav-brand">GD //</div>
+  <div class="nav-item active" data-sec="home">Home</div>
+  <div class="nav-item" data-sec="intuition">01 Intuition</div>
+  <div class="nav-item" data-sec="cost">02 Cost Fn</div>
+  <div class="nav-item" data-sec="gradient">03 Gradient</div>
+  <div class="nav-item" data-sec="update">04 Update Rule</div>
+  <div class="nav-item" data-sec="lr">05 Learning Rate</div>
+  <div class="nav-item" data-sec="variants">06 Variants</div>
+  <div class="nav-item" data-sec="demo">07 Live Demo</div>
+  <div class="nav-item" data-sec="challenges">08 Challenges</div>
+</nav>
+
+<!-- ==================== HOME ==================== -->
+<section id="home" class="visible hero">
+  <div class="hero-tag">HTU · AI-302 · Optimization</div>
+  <h1>Gradient<br>Descent</h1>
+  <p>The algorithm that trains nearly every machine learning model. Work through 8 interactive sections — each builds on the last, and each ends with a short quiz.</p>
+  <div class="hero-btns">
+    <button class="hero-btn hero-btn-primary" onclick="goTo('intuition')">Start Learning →</button>
+    <button class="hero-btn hero-btn-secondary" onclick="goTo('demo')">Jump to Demo</button>
+  </div>
+
+  <div class="grid-2" style="margin-top:3rem;">
+    <div class="analogy-item" onclick="goTo('intuition')" style="cursor:pointer;"><div class="icon">⛰️</div><div class="concept">01 · Intuition</div><div class="meaning">The mountain analogy — where the idea comes from</div></div>
+    <div class="analogy-item" onclick="goTo('cost')" style="cursor:pointer;"><div class="icon">📉</div><div class="concept">02 · Cost Function</div><div class="meaning">What we're minimizing and why</div></div>
+    <div class="analogy-item" onclick="goTo('gradient')" style="cursor:pointer;"><div class="icon">📐</div><div class="concept">03 · The Gradient</div><div class="meaning">Derivatives, slopes, and direction</div></div>
+    <div class="analogy-item" onclick="goTo('update')" style="cursor:pointer;"><div class="icon">🔄</div><div class="concept">04 · Update Rule</div><div class="meaning">The one equation you must know</div></div>
+    <div class="analogy-item" onclick="goTo('lr')" style="cursor:pointer;"><div class="icon">⚡</div><div class="concept">05 · Learning Rate</div><div class="meaning">The trickiest hyperparameter</div></div>
+    <div class="analogy-item" onclick="goTo('variants')" style="cursor:pointer;"><div class="icon">🔀</div><div class="concept">06 · Variants</div><div class="meaning">Batch, Stochastic, Mini-Batch</div></div>
+    <div class="analogy-item" onclick="goTo('demo')" style="cursor:pointer;"><div class="icon">🎮</div><div class="concept">07 · Live Demo</div><div class="meaning">Control it yourself — step by step</div></div>
+    <div class="analogy-item" onclick="goTo('challenges')" style="cursor:pointer;"><div class="icon">⚠️</div><div class="concept">08 · Challenges</div><div class="meaning">Local minima, saddle points, convergence</div></div>
+  </div>
+</section>
+
+<!-- ==================== 01 INTUITION ==================== -->
+<section id="intuition">
+  <div class="sec-num">01</div>
+  <div class="section-label">The Big Picture</div>
+  <h1>The Mountain Analogy</h1>
+  <p>Imagine you are standing somewhere on a <strong>foggy mountain</strong> at night. Your goal is to reach the lowest valley. You can't see far ahead — the fog limits your view to just a few metres. What do you do?</p>
+  <p>You <strong>feel the slope beneath your feet</strong> and take a small, careful step downhill. Then you reassess. Then step again. You repeat this until the ground feels flat beneath you — you've reached the valley floor.</p>
+  <div class="card card-green">
+    <p style="margin:0"><strong>Gradient descent in one sentence:</strong> repeatedly take small steps in the direction that reduces the cost function, until you can't reduce it further.</p>
+  </div>
+
+  <h2>Why Do We Need This at All?</h2>
+  <p>In machine learning, we want to find the model parameters (weights) that make our predictions as accurate as possible. This means <strong>minimising a cost function</strong> — a number that tells us how wrong our model is.</p>
+  <p>For simple problems with one or two parameters, we could find the minimum analytically (set the derivative to zero and solve). But real models have <em>thousands or millions</em> of parameters. Analytical solutions become computationally impossible. We need an <strong>iterative, automated approach</strong> — that's gradient descent.</p>
+
+  <h2>Mapping the Analogy to Mathematics</h2>
+  <div class="grid-2">
+    <div class="analogy-item"><div class="icon">🌄</div><div class="concept">Mountain / Valley Landscape</div><div class="meaning">The <strong>cost function J(θ)</strong> plotted against the model parameters (θ). Peaks = high error. Valleys = low error.</div></div>
+    <div class="analogy-item"><div class="icon">📍</div><div class="concept">Your Current Position</div><div class="meaning">The <strong>current values of parameters θ</strong> (e.g. slope m and intercept b in linear regression)</div></div>
+    <div class="analogy-item"><div class="icon">⛅</div><div class="concept">The Fog</div><div class="meaning">We can only compute the gradient <strong>locally</strong> at our current position — we can't see the whole cost surface at once</div></div>
+    <div class="analogy-item"><div class="icon">📏</div><div class="concept">Steepness of the Slope</div><div class="meaning">The <strong>gradient ∇J</strong> — tells us how fast the cost changes and in which direction it increases fastest</div></div>
+    <div class="analogy-item"><div class="icon">👟</div><div class="concept">Size of Each Step</div><div class="meaning">The <strong>learning rate α</strong> — a small number we choose that controls how large each update to the parameters is</div></div>
+    <div class="analogy-item"><div class="icon">🏁</div><div class="concept">Reaching the Valley Floor</div><div class="meaning">The <strong>minimum of the cost function</strong> — the optimal parameter values where our model performs best</div></div>
+  </div>
+
+  <div class="card card-yellow" style="margin-top:1rem;">
+    <strong>Key direction insight:</strong> The gradient points <em>uphill</em> (direction of steepest ascent). To go downhill, we move in the <em>opposite</em> direction — which is why the update rule subtracts the gradient.
+  </div>
+
+  <h2>A Brief History</h2>
+  <p>Gradient descent was first proposed by <strong>Augustin-Louis Cauchy</strong> in 1847. It remained largely theoretical for over a century. With the rise of neural networks in the 1980s and the backpropagation algorithm, it became the dominant method for training machine learning models. Today it powers GPT, image recognition, recommendation systems — virtually every AI system you interact with.</p>
+
+  <!-- MCQ -->
+  <div class="mcq-section">
+    <div class="mcq-title">Check Your Understanding</div>
+    <div id="mcq-intuition"></div>
+  </div>
+
+  <div class="section-nav">
+    <span></span>
+    <button class="btn" onclick="goTo('cost')">Next: Cost Function →</button>
+  </div>
+</section>
+
+<!-- ==================== 02 COST FUNCTION ==================== -->
+<section id="cost">
+  <div class="sec-num">02</div>
+  <div class="section-label">What We Are Minimising</div>
+  <h1>The Cost Function</h1>
+  <p>Before we can descend, we need something to descend <em>on</em>. The <strong>cost function J(θ)</strong> — also called the loss function or objective function — measures how wrong our model's predictions are across the entire training set. It converts every error into a single number.</p>
+
+  <h2>Why a Single Number?</h2>
+  <p>Our model makes one prediction per training example. If we have 1000 training examples, we have 1000 errors. Gradient descent needs a single value to minimise. The cost function aggregates all those individual errors into one score we can optimise.</p>
+
+  <h2>Mean Squared Error — The Standard Choice</h2>
+  <p>For regression problems, <strong>Mean Squared Error (MSE)</strong> is the most common cost function:</p>
+  <div class="formula">J(θ) = (1 / 2n) · Σᵢ (ŷᵢ − yᵢ)²</div>
+
+  <div class="grid-2" style="margin-top:0.5rem;">
+    <div class="card" style="padding:1rem;">
+      <h3>Symbols Explained</h3>
+      <table>
+        <tr><th>Symbol</th><th>Meaning</th></tr>
+        <tr><td style="font-family:var(--mono);color:var(--accent3);">n</td><td>Number of training examples</td></tr>
+        <tr><td style="font-family:var(--mono);color:var(--accent3);">ŷᵢ</td><td>Model's predicted value for example i</td></tr>
+        <tr><td style="font-family:var(--mono);color:var(--accent3);">yᵢ</td><td>Actual (true) value for example i</td></tr>
+        <tr><td style="font-family:var(--mono);color:var(--accent3);">(ŷ−y)²</td><td>Squared error — always positive</td></tr>
+        <tr><td style="font-family:var(--mono);color:var(--accent3);">½</td><td>Convenience factor — cancels with the 2 that appears when we differentiate</td></tr>
+      </table>
+    </div>
+    <div class="card" style="padding:1rem;">
+      <h3>Why Squared?</h3>
+      <p style="font-size:0.83rem;">Squaring the error does two things: it makes all errors <strong>positive</strong> (so negative and positive errors don't cancel out), and it <strong>penalises large errors more heavily</strong> than small ones — a prediction that's 10 units off contributes 100× more to the cost than one that's 1 unit off.</p>
+    </div>
+  </div>
+
+  <h2>The Cost Surface</h2>
+  <p>When plotted against the parameters, J(θ) forms a surface in space. For linear regression with one parameter, it's a simple curve. With two parameters (m and b), it forms a bowl shape — the minimum is at the bottom of the bowl.</p>
+
+  <div class="canvas-wrap">
+    <canvas id="costCanvas" height="240"></canvas>
+    <p class="canvas-hint">The parabola is J(w) = w². The green dot marks the global minimum at w = 0.</p>
+  </div>
+
+  <h2>Why Not Just Solve for the Minimum Directly?</h2>
+  <p>For linear regression with a small dataset, you <em>can</em> solve analytically using the <strong>Normal Equation</strong>: θ = (XᵀX)⁻¹Xᵀy. But this requires computing a matrix inverse, which scales as O(n³). With hundreds of features, this becomes prohibitively expensive. Gradient descent scales to millions of parameters and is the only practical approach for deep neural networks.</p>
+
+  <div class="card card-purple">
+    <strong>Note on terminology:</strong> "Cost function", "loss function", and "objective function" are often used interchangeably, though strictly speaking the <em>loss</em> is per example and the <em>cost</em> is the average over all examples.
+  </div>
+
+  <!-- MCQ -->
+  <div class="mcq-section">
+    <div class="mcq-title">Check Your Understanding</div>
+    <div id="mcq-cost"></div>
+  </div>
+
+  <div class="section-nav">
+    <button class="btn" onclick="goTo('intuition')">← Intuition</button>
+    <button class="btn" onclick="goTo('gradient')">Next: The Gradient →</button>
+  </div>
+</section>
+
+<!-- ==================== 03 GRADIENT ==================== -->
+<section id="gradient">
+  <div class="sec-num">03</div>
+  <div class="section-label">Direction Finder</div>
+  <h1>The Gradient</h1>
+  <p>The gradient is the <strong>multi-dimensional generalisation of the derivative</strong>. It tells us the slope of the cost function at our current position — specifically, how much the cost changes when we nudge each parameter slightly.</p>
+
+  <h2>The First Derivative — A Refresher</h2>
+  <p>For a function of <em>one</em> variable f(w), the derivative f'(w) gives the slope of the tangent line at w:</p>
+  <div class="formula">f'(w) = df/dw = lim[Δw→0] ( f(w + Δw) − f(w) ) / Δw</div>
+  <p>Positive derivative → function is increasing → we are to the right of the minimum → step left.<br>Negative derivative → function is decreasing → we are to the left of the minimum → step right.<br><strong>Either way, subtracting the derivative moves us toward the minimum.</strong></p>
+
+  <div class="canvas-wrap">
+    <canvas id="gradCanvas" height="260"></canvas>
+    <p class="canvas-hint">Move your mouse over the curve to see the tangent line and gradient value at each point.</p>
+  </div>
+
+  <h2>Partial Derivatives — Multiple Parameters</h2>
+  <p>Real models have many parameters. If J depends on two parameters θ₁ and θ₂, we compute a <strong>partial derivative</strong> for each — holding all others fixed:</p>
+  <div class="grid-2">
+    <div class="formula formula-sm">∂J/∂θ₁ — how much J changes when θ₁ changes (θ₂ held fixed)</div>
+    <div class="formula formula-sm">∂J/∂θ₂ — how much J changes when θ₂ changes (θ₁ held fixed)</div>
+  </div>
+
+  <h2>The Gradient Vector</h2>
+  <p>The <strong>gradient ∇J</strong> is a vector containing all the partial derivatives. For a function of n parameters:</p>
+  <div class="formula">∇J(θ) = [ ∂J/∂θ₁, ∂J/∂θ₂, …, ∂J/∂θₙ ]</div>
+  <p>This vector points in the direction of <strong>steepest ascent</strong> on the cost surface. To minimise the cost, we move in the <em>opposite</em> direction — hence the minus sign in the update rule.</p>
+
+  <h2>Gradient for MSE with Linear Regression</h2>
+  <p>For J = (1/2n)·Σ(mx + b − y)², the partial derivatives work out to:</p>
+  <div class="formula formula-sm">∂J/∂m = (1/n) · Σ (ŷᵢ − yᵢ) · xᵢ</div>
+  <div class="formula formula-sm">∂J/∂b = (1/n) · Σ (ŷᵢ − yᵢ)</div>
+
+  <div class="card card-green">
+    <strong>Intuition for the formulas above:</strong> the partial derivative w.r.t. m is the average of (error × input x). This makes sense — parameters connected to larger inputs have a bigger influence on the output, so their gradient should account for that.
+  </div>
+
+  <!-- MCQ -->
+  <div class="mcq-section">
+    <div class="mcq-title">Check Your Understanding</div>
+    <div id="mcq-gradient"></div>
+  </div>
+
+  <div class="section-nav">
+    <button class="btn" onclick="goTo('cost')">← Cost Function</button>
+    <button class="btn" onclick="goTo('update')">Next: Update Rule →</button>
+  </div>
+</section>
+
+<!-- ==================== 04 UPDATE RULE ==================== -->
+<section id="update">
+  <div class="sec-num">04</div>
+  <div class="section-label">The Core Equation</div>
+  <h1>The Update Rule</h1>
+  <p>Everything in gradient descent collapses into one compact equation, applied once per <strong>iteration</strong> (also called an <strong>epoch</strong> when using the full dataset):</p>
+
+  <div class="formula formula-annotated">
+    <div class="part"><span>θ</span><span class="lbl">parameter (new value)</span></div>
+    <div class="part" style="color:var(--text);padding-top:0.1rem;"> ← </div>
+    <div class="part"><span>θ</span><span class="lbl">parameter (old value)</span></div>
+    <div class="part" style="color:var(--text);padding-top:0.1rem;"> − </div>
+    <div class="part" style="color:var(--accent2);"><span>α</span><span class="lbl">learning rate</span></div>
+    <div class="part" style="color:var(--text);padding-top:0.1rem;"> · </div>
+    <div class="part" style="color:var(--purple);"><span>∂J/∂θ</span><span class="lbl">gradient of cost w.r.t. θ</span></div>
+  </div>
+
+  <h2>Reading the Equation</h2>
+  <div class="grid-2">
+    <div class="card" style="padding:1rem;">
+      <h3>θ (left side)</h3>
+      <p style="font-size:0.83rem;">The new, updated value of our parameter after this iteration. We overwrite the old value.</p>
+    </div>
+    <div class="card" style="padding:1rem;">
+      <h3>α · ∂J/∂θ</h3>
+      <p style="font-size:0.83rem;">The step we take. The gradient tells us the direction and the magnitude of the slope. α scales how large the step actually is.</p>
+    </div>
+    <div class="card" style="padding:1rem;">
+      <h3>The minus sign</h3>
+      <p style="font-size:0.83rem;">We subtract the gradient because it points <em>uphill</em>. Subtracting it points us downhill — toward lower cost.</p>
+    </div>
+    <div class="card" style="padding:1rem;">
+      <h3>Convergence</h3>
+      <p style="font-size:0.83rem;">As we approach the minimum, the gradient becomes smaller and smaller. Steps get tiny — the parameter values stop changing significantly.</p>
+    </div>
+  </div>
+
+  <h2>Applied to Linear Regression</h2>
+  <p>For ŷ = mx + b, we update both parameters simultaneously at each iteration:</p>
+  <div class="formula formula-sm">m ← m − α · (1/n) · Σ(ŷᵢ − yᵢ)·xᵢ</div>
+  <div class="formula formula-sm">b ← b − α · (1/n) · Σ(ŷᵢ − yᵢ)</div>
+
+  <div class="card card-red">
+    <strong>⚠ Critical: Simultaneous Update</strong><br><br>
+    <p style="margin:0;font-size:0.88rem;">You MUST compute BOTH gradients using the CURRENT values of m and b, then update BOTH at the same time. <strong>Do not</strong> update m first and then use the new m to compute the gradient for b — this is a common mistake that produces incorrect results.</p>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.8rem;margin-top:0.8rem;">
+      <div style="background:rgba(79,255,176,0.08);border:1px solid rgba(79,255,176,0.3);border-radius:4px;padding:0.7rem;">
+        <div style="font-family:var(--mono);font-size:0.68rem;color:var(--accent);margin-bottom:0.4rem;">✓ CORRECT</div>
+        <div style="font-family:var(--mono);font-size:0.75rem;color:#c0c8dc;line-height:1.8;">Dm = gradient using old m, b<br>Db = gradient using old m, b<br>m = m − α·Dm<br>b = b − α·Db</div>
+      </div>
+      <div style="background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.3);border-radius:4px;padding:0.7rem;">
+        <div style="font-family:var(--mono);font-size:0.68rem;color:var(--accent2);margin-bottom:0.4rem;">✗ WRONG</div>
+        <div style="font-family:var(--mono);font-size:0.75rem;color:#c0c8dc;line-height:1.8;">Dm = gradient using old m, b<br>m = m − α·Dm  ← update m first!<br>Db = gradient using NEW m, b ← error<br>b = b − α·Db</div>
+      </div>
+    </div>
+  </div>
+
+  <h2>Full Algorithm — Step by Step</h2>
+  <ul class="steps-list">
+    <li><span class="step-num">1.</span><span class="step-text">Initialize parameters to zero (or small random values)<span class="step-formula">m = 0, b = 0, choose α (e.g. 0.01), choose max iterations</span></span></li>
+    <li><span class="step-num">2.</span><span class="step-text">Compute predictions for all training examples<span class="step-formula">ŷᵢ = m·xᵢ + b for all i</span></span></li>
+    <li><span class="step-num">3.</span><span class="step-text">Compute the cost<span class="step-formula">J = (1/2n)·Σ(ŷᵢ − yᵢ)²</span></span></li>
+    <li><span class="step-num">4.</span><span class="step-text">Compute gradients (partial derivatives) using current parameters<span class="step-formula">Dm = (1/n)·Σ(ŷᵢ−yᵢ)·xᵢ &nbsp;&nbsp; Db = (1/n)·Σ(ŷᵢ−yᵢ)</span></span></li>
+    <li><span class="step-num">5.</span><span class="step-text">Update both parameters simultaneously<span class="step-formula">m ← m − α·Dm &nbsp;&nbsp; b ← b − α·Db</span></span></li>
+    <li><span class="step-num">6.</span><span class="step-text">Check for convergence. If not converged, go back to step 2.</span></li>
+  </ul>
+
+  <!-- MCQ -->
+  <div class="mcq-section">
+    <div class="mcq-title">Check Your Understanding</div>
+    <div id="mcq-update"></div>
+  </div>
+
+  <div class="section-nav">
+    <button class="btn" onclick="goTo('gradient')">← The Gradient</button>
+    <button class="btn" onclick="goTo('lr')">Next: Learning Rate →</button>
+  </div>
+</section>
+
+<!-- ==================== 05 LEARNING RATE ==================== -->
+<section id="lr">
+  <div class="sec-num">05</div>
+  <div class="section-label">The Critical Hyperparameter</div>
+  <h1>The Learning Rate α</h1>
+  <p>The learning rate α is a small positive number — typically between 0.0001 and 1.0 — that controls how large each parameter update step is. It is arguably the <strong>most important hyperparameter</strong> in gradient descent. Getting it wrong can completely break training.</p>
+  <p>Unlike parameters (m, b), which are <em>learned</em> during training, α is a <strong>hyperparameter</strong> — a design choice made by the engineer before training begins.</p>
+
+  <h2>The Three Regimes — Click to Simulate</h2>
+  <div class="lr-scenarios">
+    <div class="lr-scenario active" id="lr0" onclick="selectLR(0)"><div class="lr-val">α = 0.001</div><div class="lr-label">Too Small</div></div>
+    <div class="lr-scenario" id="lr1" onclick="selectLR(1)"><div class="lr-val">α = 0.15</div><div class="lr-label">Just Right</div></div>
+    <div class="lr-scenario" id="lr2" onclick="selectLR(2)"><div class="lr-val">α = 0.95</div><div class="lr-label">Too Large</div></div>
+  </div>
+  <div class="canvas-wrap"><canvas id="lrCanvas" height="240"></canvas></div>
+  <div class="status-bar" id="lrStatus">
+    <span>Iterations: <span class="val" id="lrIter">—</span></span>
+    <span>Cost: <span class="val" id="lrCost">—</span></span>
+    <span>Status: <span class="val" id="lrStatusText">Select a scenario above</span></span>
+  </div>
+
+  <div class="grid-3" style="margin-top:1rem;">
+    <div class="card card-red" style="padding:1rem;">
+      <h3 style="color:var(--accent2);">Too Small (α ≪)</h3>
+      <p style="font-size:0.82rem;">Steps are tiny. The algorithm converges but takes many thousands of iterations. Computationally wasteful. The cost curve decreases very slowly.</p>
+    </div>
+    <div class="card card-green" style="padding:1rem;">
+      <h3>Just Right</h3>
+      <p style="font-size:0.82rem;">Cost decreases smoothly and reaches the minimum in a reasonable number of iterations. The sweet spot varies per problem.</p>
+    </div>
+    <div class="card card-yellow" style="padding:1rem;">
+      <h3 style="color:var(--accent3);">Too Large (α ≫)</h3>
+      <p style="font-size:0.82rem;">Steps overshoot the minimum. The algorithm bounces back and forth — cost may actually <em>increase</em>. In extreme cases, the parameters diverge to infinity.</p>
+    </div>
+  </div>
+
+  <h2>Practical Guidelines for Choosing α</h2>
+  <ul class="steps-list">
+    <li><span class="step-num">→</span><span class="step-text">Start with α = 0.01 and adjust based on the cost curve</span></li>
+    <li><span class="step-num">→</span><span class="step-text">Plot cost vs. iteration. A healthy training curve decreases smoothly and flattens near convergence</span></li>
+    <li><span class="step-num">→</span><span class="step-text">If cost oscillates or increases, reduce α by a factor of 10</span></li>
+    <li><span class="step-num">→</span><span class="step-text">If cost decreases but training takes forever, try increasing α by a factor of 3</span></li>
+    <li><span class="step-num">→</span><span class="step-text">Advanced: use <strong>learning rate schedules</strong> — start high (fast progress), then decay α over time (fine-tune near minimum)</span></li>
+  </ul>
+
+  <!-- MCQ -->
+  <div class="mcq-section">
+    <div class="mcq-title">Check Your Understanding</div>
+    <div id="mcq-lr"></div>
+  </div>
+
+  <div class="section-nav">
+    <button class="btn" onclick="goTo('update')">← Update Rule</button>
+    <button class="btn" onclick="goTo('variants')">Next: Variants →</button>
+  </div>
+</section>
+
+<!-- ==================== 06 VARIANTS ==================== -->
+<section id="variants">
+  <div class="sec-num">06</div>
+  <div class="section-label">Three Flavours</div>
+  <h1>Variants of Gradient Descent</h1>
+  <p>The original formulation of gradient descent uses <em>all</em> training examples to compute the gradient at each step. But with millions of training examples, this is extremely slow. Three main variants exist, each making a different trade-off between <strong>gradient accuracy</strong> and <strong>computational speed</strong>.</p>
+
+  <h2>The Core Difference</h2>
+  <p>The only thing that changes between variants is <strong>how many training examples are used to compute the gradient</strong> at each step. Everything else — the update rule, the convergence goal — remains the same.</p>
+
+  <div class="grid-3" style="margin-top:1rem;">
+    <div class="variant-card">
+      <div class="v-name">Batch GD</div>
+      <div class="v-desc">Uses ALL n training examples to compute one gradient update.</div>
+      <div class="formula formula-sm" style="margin:0.5rem 0;font-size:0.75rem;">Gradient over all n examples</div>
+      <div><span class="v-badge pro">✓ Accurate gradient</span></div>
+      <div style="margin-top:0.3rem;"><span class="v-badge pro">✓ Smooth convergence</span></div>
+      <div style="margin-top:0.3rem;"><span class="v-badge con">✗ Slow on large data</span></div>
+      <div style="margin-top:0.3rem;"><span class="v-badge con">✗ High memory use</span></div>
+    </div>
+    <div class="variant-card" style="border-color:var(--accent);">
+      <div class="v-name" style="color:var(--accent3);">Mini-Batch GD ⭐</div>
+      <div class="v-desc">Uses a small <strong>batch</strong> (typically 32–512 examples) per update. The industry standard.</div>
+      <div class="formula formula-sm" style="margin:0.5rem 0;font-size:0.75rem;">Gradient over batch size k</div>
+      <div><span class="v-badge pro">✓ Reasonably accurate</span></div>
+      <div style="margin-top:0.3rem;"><span class="v-badge pro">✓ GPU-friendly</span></div>
+      <div style="margin-top:0.3rem;"><span class="v-badge pro">✓ Good convergence</span></div>
+      <div style="margin-top:0.3rem;"><span class="v-badge con">✗ Requires tuning batch size</span></div>
+    </div>
+    <div class="variant-card">
+      <div class="v-name">Stochastic GD (SGD)</div>
+      <div class="v-desc">Uses just ONE randomly selected training example per gradient update.</div>
+      <div class="formula formula-sm" style="margin:0.5rem 0;font-size:0.75rem;">Gradient over 1 example</div>
+      <div><span class="v-badge pro">✓ Very fast updates</span></div>
+      <div><span class="v-badge pro" style="margin-top:0.3rem;">✓ Can escape local minima</span></div>
+      <div style="margin-top:0.3rem;"><span class="v-badge con">✗ Very noisy gradient</span></div>
+      <div style="margin-top:0.3rem;"><span class="v-badge con">✗ Oscillates near minimum</span></div>
+    </div>
+  </div>
+
+  <h2>Comparison at a Glance</h2>
+  <table>
+    <tr><th>Property</th><th>Batch GD</th><th>Mini-Batch GD</th><th>SGD</th></tr>
+    <tr><td>Examples per update</td><td>All n</td><td>k (e.g. 32, 64, 128)</td><td>1</td></tr>
+    <tr><td>Gradient accuracy</td><td>Exact</td><td>Good estimate</td><td>Very noisy</td></tr>
+    <tr><td>Computation per step</td><td>High</td><td>Medium</td><td>Very low</td></tr>
+    <tr><td>Updates per epoch</td><td>1</td><td>n/k</td><td>n</td></tr>
+    <tr><td>Memory requirement</td><td>Full dataset</td><td>One batch</td><td>One example</td></tr>
+    <tr><td>Convergence path</td><td>Smooth</td><td>Slightly noisy</td><td>Very noisy</td></tr>
+    <tr><td>Practical use</td><td>Small datasets</td><td>Standard in deep learning</td><td>Very large datasets</td></tr>
+  </table>
+
+  <div class="card card-yellow" style="margin-top:1rem;">
+    <strong>Why does noise sometimes help?</strong> Stochastic and mini-batch gradient descent are "noisier" — their gradient estimates fluctuate. This noise can actually be <em>beneficial</em>: it can help the algorithm escape shallow local minima that batch gradient descent would get stuck in, potentially finding better solutions.
+  </div>
+
+  <h2>What is a "Batch Size"?</h2>
+  <p>In mini-batch GD, you divide your training data into small chunks called <strong>batches</strong>. One pass through all batches (covering the entire training set) is called an <strong>epoch</strong>. With 1000 examples and a batch size of 100, you perform 10 gradient updates per epoch. Common batch sizes: 32, 64, 128, 256 — powers of 2 work well on GPUs.</p>
+
+  <!-- MCQ -->
+  <div class="mcq-section">
+    <div class="mcq-title">Check Your Understanding</div>
+    <div id="mcq-variants"></div>
+  </div>
+
+  <div class="section-nav">
+    <button class="btn" onclick="goTo('lr')">← Learning Rate</button>
+    <button class="btn" onclick="goTo('demo')">Next: Live Demo →</button>
+  </div>
+</section>
+
+<!-- ==================== 07 LIVE DEMO ==================== -->
+<section id="demo">
+  <div class="sec-num">07</div>
+  <div class="section-label">See it Run</div>
+  <h1>Live Simulation</h1>
+  <p>We minimise J(w) = w² — the simplest possible cost function. Its minimum is at w = 0. The gradient is dJ/dw = 2w, so the update rule is: <strong>w ← w − α · 2w</strong>. Set the starting point and learning rate, then step through iteration by iteration.</p>
+
+  <div class="controls">
+    <div class="control-group">
+      <label>Starting w: <span class="val" id="startVal">3.0</span></label>
+      <input type="range" id="startSlider" min="-4" max="4" step="0.1" value="3" oninput="document.getElementById('startVal').textContent=parseFloat(this.value).toFixed(1);resetDemo()">
+    </div>
+    <div class="control-group">
+      <label>Learning rate α: <span class="val" id="alphaVal">0.10</span></label>
+      <input type="range" id="alphaSlider" min="0.01" max="0.98" step="0.01" value="0.1" oninput="document.getElementById('alphaVal').textContent=parseFloat(this.value).toFixed(2);resetDemo()">
+    </div>
+  </div>
+
+  <div class="canvas-wrap">
+    <canvas id="demoCanvas" height="300"></canvas>
+  </div>
+
+  <div class="status-bar">
+    <span>Step: <span class="val" id="demoStep">0</span></span>
+    <span>w: <span class="val" id="demoW">3.0000</span></span>
+    <span>J(w) = w²: <span class="val" id="demoCost">9.0000</span></span>
+    <span>Gradient 2w: <span class="val" id="demoGrad">6.0000</span></span>
+    <span>Step taken: <span class="val" id="demoStepTaken">—</span></span>
+  </div>
+
+  <div class="btn-row" style="margin-top:1rem;">
+    <button class="btn" id="btnStep" onclick="stepDemo()">Step Once</button>
+    <button class="btn" id="btnRun" onclick="runDemo()">▶ Run</button>
+    <button class="btn" onclick="resetDemo()">↺ Reset</button>
+  </div>
+
+  <div class="card card-green" id="demoMsg" style="display:none;margin-top:0.8rem;">
+    <p style="margin:0;color:var(--accent);">✓ Converged! The algorithm found the minimum at w ≈ 0. Notice how the steps got smaller near the bottom — that's because the gradient (2w) shrinks as w approaches zero.</p>
+  </div>
+  <div class="card card-red" id="divergeMsg" style="display:none;margin-top:0.8rem;">
+    <p style="margin:0;color:var(--accent2);">✗ Diverged! The learning rate is too large — the algorithm is overshooting the minimum with each step. Try reducing α.</p>
+  </div>
+
+  <h2>What to Experiment With</h2>
+  <ul class="steps-list">
+    <li><span class="step-num">→</span><span class="step-text">Set α very small (0.01) — watch how many steps it takes to get close to zero</span></li>
+    <li><span class="step-num">→</span><span class="step-text">Set α = 0.99 — observe the oscillation or divergence</span></li>
+    <li><span class="step-num">→</span><span class="step-text">Try starting from a negative w — the algorithm should still converge</span></li>
+    <li><span class="step-num">→</span><span class="step-text">Notice that as w approaches zero, the step size shrinks — this is gradient descent naturally decelerating near the minimum</span></li>
+  </ul>
+
+  <!-- MCQ -->
+  <div class="mcq-section">
+    <div class="mcq-title">Check Your Understanding</div>
+    <div id="mcq-demo"></div>
+  </div>
+
+  <div class="section-nav">
+    <button class="btn" onclick="goTo('variants')">← Variants</button>
+    <button class="btn" onclick="goTo('challenges')">Next: Challenges →</button>
+  </div>
+</section>
+
+<!-- ==================== 08 CHALLENGES ==================== -->
+<section id="challenges">
+  <div class="sec-num">08</div>
+  <div class="section-label">Real-World Complications</div>
+  <h1>Challenges of Gradient Descent</h1>
+  <p>Gradient descent is powerful, but it comes with several challenges that practitioners must understand and work around. These are not just theoretical — they affect real training runs every day.</p>
+
+  <h2>1. Local Minima</h2>
+  <p>The cost surface of a complex model (like a neural network) is not a simple bowl — it has many <strong>valleys (local minima)</strong> and a single <strong>deepest valley (global minimum)</strong>. Gradient descent always moves downhill from its starting point, so it may settle into a local minimum and never find the global one.</p>
+
+  <div class="canvas-wrap">
+    <canvas id="localMinCanvas" height="220"></canvas>
+    <p class="canvas-hint">Two starting points (red dots) leading to different minima. Starting on the left reaches the deeper global minimum.</p>
+  </div>
+
+  <div class="card card-yellow">
+    <strong>Good news for deep learning:</strong> Research has shown that local minima are less of a problem in practice than previously feared. In high-dimensional spaces (millions of parameters), most local minima have similar cost values to the global minimum. The bigger concern is <strong>saddle points</strong>.
+  </div>
+
+  <h2>2. Saddle Points</h2>
+  <p>A <strong>saddle point</strong> is a point where the gradient is zero but it's neither a maximum nor a minimum — it's a minimum in some dimensions and a maximum in others. In high-dimensional spaces, saddle points are far more common than local minima. Gradient descent can slow to a near-halt near saddle points.</p>
+
+  <h2>3. Vanishing / Exploding Gradients</h2>
+  <p>In deep neural networks with many layers, gradients are multiplied together as they propagate backwards through the network. If these values are all slightly less than 1, gradients <strong>vanish</strong> — becoming so tiny that early layers learn almost nothing. If they're all greater than 1, gradients <strong>explode</strong> — growing so large that training diverges.</p>
+  <div class="grid-2">
+    <div class="card card-red" style="padding:1rem;"><h3 style="color:var(--accent2);">Vanishing Gradient</h3><p style="font-size:0.82rem;">Gradient → 0 in early layers. Symptoms: loss stops decreasing, early-layer weights don't change. Solutions: ReLU activations, batch normalisation, residual connections.</p></div>
+    <div class="card card-yellow" style="padding:1rem;"><h3 style="color:var(--accent3);">Exploding Gradient</h3><p style="font-size:0.82rem;">Gradient → ∞ in early layers. Symptoms: loss becomes NaN, parameters blow up. Solutions: gradient clipping, smaller learning rate, weight initialisation.</p></div>
+  </div>
+
+  <h2>4. When to Stop — Convergence Criteria</h2>
+  <p>How do we know when gradient descent has finished? Three common stopping rules:</p>
+  <div class="card" style="padding:1.2rem;">
+    <div class="criteria-item"><span class="criteria-num">①</span><span style="font-size:0.88rem;color:#c0c8dc;"><strong>Fixed number of iterations:</strong> Run for exactly N steps (e.g. 1000 epochs). Simple and predictable but may under- or over-train.</span></div>
+    <div class="criteria-item"><span class="criteria-num">②</span><span style="font-size:0.88rem;color:#c0c8dc;"><strong>Cost change threshold:</strong> Stop when |J(t) − J(t−1)| &lt; ε for some tiny ε (e.g. 10⁻⁶). Cost is no longer decreasing meaningfully.</span></div>
+    <div class="criteria-item"><span class="criteria-num">③</span><span style="font-size:0.88rem;color:#c0c8dc;"><strong>Gradient magnitude:</strong> Stop when ‖∇J‖ &lt; ε. The gradient is essentially zero — we're at a (hopefully) flat minimum.</span></div>
+  </div>
+
+  <h2>5. Feature Scaling</h2>
+  <p>If input features have very different scales (e.g., age in range 0–100, income in range 0–100,000), the cost surface becomes an elongated ellipse rather than a circle. Gradient descent takes an inefficient zigzag path and converges very slowly. Always <strong>normalise or standardise your features</strong> before running gradient descent.</p>
+  <div class="formula formula-sm">Standardisation: x' = (x − μ) / σ &nbsp;&nbsp; → &nbsp;&nbsp; mean 0, std 1</div>
+
+  <!-- MCQ -->
+  <div class="mcq-section">
+    <div class="mcq-title">Check Your Understanding</div>
+    <div id="mcq-challenges"></div>
+  </div>
+
+  <div class="card card-green" style="margin-top:2rem;">
+    <strong>🎉 You've completed all 8 sections!</strong><br>
+    <p style="margin:0.5rem 0 0;font-size:0.88rem;">You now have a solid understanding of gradient descent: the intuition, the math, the algorithm, its hyperparameters, variants, and real-world challenges. This is the foundation of all modern machine learning.</p>
+  </div>
+
+  <div class="section-nav">
+    <button class="btn" onclick="goTo('demo')">← Live Demo</button>
+    <button class="btn" onclick="goTo('home')">↑ Back to Top</button>
+  </div>
+</section>
+
+<script>
+// ===================== NAVIGATION =====================
+const sections = ['home','intuition','cost','gradient','update','lr','variants','demo','challenges'];
+
+function goTo(id) {
+  document.querySelectorAll('section').forEach(s => s.classList.remove('visible'));
+  document.getElementById(id).classList.add('visible');
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.sec === id));
+  const idx = sections.indexOf(id);
+  document.getElementById('progressBar').style.width = ((idx+1)/sections.length*100) + '%';
+  window.scrollTo(0, 0);
+  if (id==='cost') setTimeout(drawCostCanvas, 80);
+  if (id==='gradient') setTimeout(initGradCanvas, 80);
+  if (id==='lr') setTimeout(()=>selectLR(0), 80);
+  if (id==='demo') setTimeout(resetDemo, 80);
+  if (id==='challenges') setTimeout(drawLocalMinCanvas, 80);
+}
+document.querySelectorAll('.nav-item').forEach(n => n.addEventListener('click', () => goTo(n.dataset.sec)));
+
+// ===================== MCQ ENGINE =====================
+const allMCQ = {
+  intuition: [
+    { q: "What real-world element in the mountain analogy represents the learning rate α?",
+      opts: ["The fog that limits visibility","The size of each step you take downhill","The steepness of the slope","The location of the valley floor"],
+      correct: 1,
+      exp: "Correct! α (the learning rate) controls how large each update step is — exactly like controlling how big a step you take downhill on the mountain." },
+    { q: "Why can't we always find the minimum of a cost function analytically (by setting the derivative to zero)?",
+      opts: ["Because gradients are always zero at the minimum","Because cost functions are never differentiable","Because models with many parameters lead to equations that are computationally infeasible to solve directly","Because gradient descent is always more accurate than analytical methods"],
+      correct: 2,
+      exp: "Correct! With thousands or millions of parameters, solving the system of equations analytically (e.g., via matrix inversion) is computationally intractable. We need iterative methods like gradient descent." },
+    { q: "In the mountain analogy, what does the 'fog' represent mathematically?",
+      opts: ["The global minimum","The fact that we can only compute the gradient locally at our current position","The learning rate being too small","The cost function value"],
+      correct: 1,
+      exp: "Correct! The fog represents the local nature of gradient information — we can only compute the gradient at our current position, not see the whole cost landscape at once." }
+  ],
+  cost: [
+    { q: "Why do we square the errors in Mean Squared Error rather than just summing them?",
+      opts: ["To make the computation faster","To ensure errors are always positive and to penalise larger errors more heavily","To make the gradient equal to zero at the minimum","Because squaring is required by the update rule"],
+      correct: 1,
+      exp: "Correct! Squaring serves two purposes: it makes all errors positive (preventing negative and positive errors from cancelling), and it penalises large errors disproportionately more than small ones." },
+    { q: "The factor of ½ in J(θ) = (1/2n)·Σ(ŷ−y)² exists because:",
+      opts: ["It makes the cost smaller and easier to work with","It cancels with the 2 that appears when we differentiate the squared term, giving a cleaner gradient formula","It is required for the cost function to be convex","It ensures the cost is always between 0 and 1"],
+      correct: 1,
+      exp: "Correct! When you differentiate (ŷ−y)², you get 2(ŷ−y). The ½ cancels this 2, leaving just (ŷ−y) in the gradient — a clean result." },
+    { q: "Why is gradient descent preferred over the Normal Equation (analytical solution) for large-scale models?",
+      opts: ["Gradient descent always finds a better solution","The Normal Equation requires matrix inversion which scales as O(n³) — impractical for many parameters","The Normal Equation cannot handle regression problems","Gradient descent is simpler to implement in all cases"],
+      correct: 1,
+      exp: "Correct! Computing (XᵀX)⁻¹ scales as O(n³) where n is the number of features. With thousands or millions of features, this is computationally intractable. Gradient descent scales much more favourably." }
+  ],
+  gradient: [
+    { q: "If the gradient ∂J/∂θ at your current position is positive, what does this tell you?",
+      opts: ["You have reached the minimum","The cost function is increasing as θ increases — you should decrease θ","The learning rate is too large","The cost function is decreasing as θ increases"],
+      correct: 1,
+      exp: "Correct! A positive gradient means the cost is going uphill as θ increases. To reduce cost, you need to decrease θ — which is exactly what happens when you subtract the positive gradient in the update rule." },
+    { q: "What is a partial derivative ∂J/∂θ₁?",
+      opts: ["The derivative of J with respect to all parameters simultaneously","The derivative of J with respect to θ₁, treating all other parameters as constants","The gradient vector of J","The second derivative of J"],
+      correct: 1,
+      exp: "Correct! A partial derivative isolates the effect of one parameter by holding all other parameters fixed. It tells us how much J changes when only θ₁ changes slightly." },
+    { q: "The gradient vector ∇J points in the direction of:",
+      opts: ["Steepest descent (toward the minimum)","Steepest ascent (away from the minimum)","The nearest local minimum","Zero cost"],
+      correct: 1,
+      exp: "Correct! The gradient points in the direction of steepest ascent — the direction in which the cost increases most rapidly. That's why we subtract it: to move in the opposite direction, toward lower cost." }
+  ],
+  update: [
+    { q: "In the update rule θ ← θ − α·∂J/∂θ, why is there a minus sign?",
+      opts: ["To ensure θ always decreases","Because the gradient points uphill; subtracting it moves us downhill toward lower cost","To prevent the learning rate from being too large","Because θ must always be positive"],
+      correct: 1,
+      exp: "Correct! The gradient ∂J/∂θ points in the direction of steepest cost increase (uphill). By subtracting it, we move in the opposite direction — toward lower cost." },
+    { q: "You are updating parameters m and b in linear regression. The correct approach is:",
+      opts: ["Update m first, use the new m to compute the gradient for b, then update b","Compute both gradients using current m and b, then update both simultaneously","Update only the parameter with the larger gradient","Alternate between updating m and b every other iteration"],
+      correct: 1,
+      exp: "Correct! Both gradients must be computed using the current (old) values of both parameters, then both parameters are updated at the same time. Updating m first and using it to compute b's gradient is a common but incorrect approach." },
+    { q: "As gradient descent approaches the minimum, the step sizes naturally:",
+      opts: ["Stay constant regardless of position","Increase because we are accelerating toward the minimum","Decrease, because the gradient magnitude shrinks near the minimum","Become random"],
+      correct: 2,
+      exp: "Correct! Near the minimum, the gradient ∂J/∂θ approaches zero (the surface is flat). Since the step = α·gradient, smaller gradient → smaller step. The algorithm naturally decelerates near the minimum." }
+  ],
+  lr: [
+    { q: "You observe that your cost function is oscillating up and down between iterations rather than decreasing. The most likely cause is:",
+      opts: ["The learning rate is too small","The learning rate is too large — steps are overshooting the minimum","The cost function has no minimum","The gradient computation is wrong"],
+      correct: 1,
+      exp: "Correct! Oscillation (or divergence) is the classic symptom of a learning rate that is too large. The steps overshoot the minimum, bounce to the other side, overshoot again, and so on." },
+    { q: "A learning rate schedule starts α high and gradually reduces it over training. The main benefit of this approach is:",
+      opts: ["It prevents the algorithm from ever reaching the minimum","Large steps make fast initial progress; smaller steps fine-tune near the minimum, improving accuracy","It eliminates the need to choose α at all","It guarantees finding the global minimum"],
+      correct: 1,
+      exp: "Correct! A decaying learning rate gets the best of both worlds: large α in early training makes fast progress toward the general region of the minimum, and small α later allows precise convergence without oscillating." },
+    { q: "The learning rate α is an example of a:",
+      opts: ["Model parameter — learned during training","Hyperparameter — set by the engineer before training","Cost function — minimised during training","Gradient — computed during training"],
+      correct: 1,
+      exp: "Correct! α is a hyperparameter — a setting chosen by the engineer that is not learned from the data. It controls how the learning algorithm behaves, unlike model parameters (m, b) which are learned." }
+  ],
+  variants: [
+    { q: "Mini-Batch Gradient Descent is the most commonly used variant in deep learning primarily because:",
+      opts: ["It always finds the global minimum","It provides a good balance between gradient accuracy and computational efficiency, and is well-suited to GPU parallelism","It uses the least memory","It requires no hyperparameter tuning"],
+      correct: 1,
+      exp: "Correct! Mini-batch GD balances accuracy (better gradient estimates than SGD) with speed (faster than batch GD). GPUs are designed to process batches of data in parallel, making mini-batch GD a natural fit." },
+    { q: "Compared to Batch Gradient Descent, Stochastic Gradient Descent (SGD) makes _____ updates per epoch with _____ accuracy per update.",
+      opts: ["Fewer; higher","More; lower","Fewer; lower","More; higher"],
+      correct: 1,
+      exp: "Correct! With n training examples, SGD makes n updates per epoch (one per example) versus 1 for batch GD. But each SGD update uses only one example, so each gradient estimate is much noisier (less accurate) than the full gradient." },
+    { q: "One unexpected advantage of the noise in Stochastic Gradient Descent is that it:",
+      opts: ["Makes the algorithm converge faster in all cases","Can help the algorithm escape shallow local minima that batch GD would get stuck in","Eliminates the need for a learning rate","Guarantees convergence to the global minimum"],
+      correct: 1,
+      exp: "Correct! The randomness in SGD's gradient estimates acts like a perturbation that can 'kick' the algorithm out of shallow local minima, potentially allowing it to find better solutions than a deterministic algorithm would." }
+  ],
+  demo: [
+    { q: "For J(w) = w², the gradient is 2w. If w = 2 and α = 0.1, what is the new value of w after one update?",
+      opts: ["w = 1.6","w = 2.4","w = 0.2","w = 1.8"],
+      correct: 0,
+      exp: "Correct! Update rule: w ← w − α·(2w) = 2 − 0.1·(2×2) = 2 − 0.1·4 = 2 − 0.4 = 1.6." },
+    { q: "In the simulation for J(w) = w², why do the step sizes get smaller as w approaches zero?",
+      opts: ["Because the learning rate α decreases automatically","Because the gradient 2w approaches zero as w approaches zero, making α·gradient smaller","Because the algorithm resets near the minimum","Because the cost function becomes flat everywhere"],
+      correct: 1,
+      exp: "Correct! The gradient is 2w. As w approaches 0, the gradient 2w also approaches 0. Since the step size is α·gradient, smaller gradient → smaller step. The algorithm naturally decelerates and converges." },
+    { q: "If you start gradient descent at w = −3 on J(w) = w², will it converge to the same minimum (w = 0) as starting at w = +3?",
+      opts: ["No — negative starting points converge to a different minimum","Yes — J(w) = w² is convex with only one global minimum at w = 0","Only if the learning rate is large enough","No — it will diverge because the gradient is negative"],
+      correct: 1,
+      exp: "Correct! J(w) = w² is a convex function — it has exactly one minimum (at w = 0). Regardless of the starting point, gradient descent will always converge to this same minimum (given a suitable learning rate)." }
+  ],
+  challenges: [
+    { q: "Gradient descent is running on a neural network and the loss plateaus very early, with early layers showing almost no weight change. This is most likely caused by:",
+      opts: ["A learning rate that is too large","Vanishing gradients — gradients shrink to near-zero as they propagate backward through many layers","Too many training epochs","Using batch gradient descent instead of mini-batch"],
+      correct: 1,
+      exp: "Correct! Vanishing gradients occur in deep networks when gradient values are multiplied across many layers, shrinking toward zero. Early layers receive almost no gradient signal and effectively stop learning." },
+    { q: "Why is feature scaling important before running gradient descent?",
+      opts: ["It makes the cost function convex","Without scaling, some features dominate the gradient, causing slow zigzag convergence on an elongated cost surface","It eliminates local minima","It makes the learning rate irrelevant"],
+      correct: 1,
+      exp: "Correct! When features have vastly different scales, the cost surface becomes elongated. Gradient descent takes an inefficient zigzag path, requiring many more iterations to converge. Standardising features makes the cost surface more circular and convergence much faster." },
+    { q: "Which stopping criterion for gradient descent is the most robust in practice?",
+      opts: ["Always run for exactly 100 iterations","Stop when the change in cost between iterations falls below a small threshold ε","Stop when the parameter values reach zero","Stop when the gradient becomes exactly zero"],
+      correct: 1,
+      exp: "Correct! Monitoring the change in cost is robust because it directly measures whether the algorithm is still making meaningful progress. Fixed iterations may over- or under-train. The gradient becoming exactly zero rarely happens in practice due to floating-point arithmetic." }
+  ]
+};
+
+const scores = {};
+
+function buildMCQ(secId, questions, containerId) {
+  scores[secId] = { correct: 0, total: questions.length, answered: new Array(questions.length).fill(false) };
+  const cont = document.getElementById(containerId);
+  if (!cont) return;
+  questions.forEach((item, qi) => {
+    const div = document.createElement('div');
+    div.className = 'mcq-item';
+    div.innerHTML = `
+      <div class="mcq-q"><span class="qnum">Q${qi+1}.</span> ${item.q}</div>
+      <div class="mcq-opts">
+        ${item.opts.map((opt, oi) => `<button class="mcq-opt" id="${containerId}_q${qi}o${oi}" onclick="answerMCQ('${secId}',${qi},${oi},'${containerId}')">${opt}</button>`).join('')}
+      </div>
+      <div class="mcq-feedback" id="${containerId}_fb${qi}"></div>
+    `;
+    cont.appendChild(div);
+  });
+  const scoreDiv = document.createElement('div');
+  scoreDiv.className = 'mcq-score';
+  scoreDiv.id = `${containerId}_score`;
+  scoreDiv.innerHTML = `Score: <span class="val">0</span> / ${questions.length}`;
+  cont.appendChild(scoreDiv);
+}
+
+function answerMCQ(secId, qi, oi, containerId) {
+  if (scores[secId].answered[qi]) return;
+  scores[secId].answered[qi] = true;
+  const item = allMCQ[secId][qi];
+  const isCorrect = oi === item.correct;
+  if (isCorrect) scores[secId].correct++;
+
+  document.querySelectorAll(`[id^="${containerId}_q${qi}o"]`).forEach((btn, i) => {
+    btn.disabled = true;
+    if (i === item.correct) btn.classList.add('correct');
+    else if (i === oi && !isCorrect) btn.classList.add('wrong');
+  });
+
+  const fb = document.getElementById(`${containerId}_fb${qi}`);
+  fb.className = `mcq-feedback show ${isCorrect ? 'ok' : 'bad'}`;
+  fb.innerHTML = isCorrect
+    ? `✓ ${item.exp}`
+    : `✗ Not quite. The correct answer was: <strong>${item.opts[item.correct]}</strong>. ${item.exp}`;
+
+  const scoreEl = document.getElementById(`${containerId}_score`);
+  if (scoreEl) scoreEl.innerHTML = `Score: <span class="val">${scores[secId].correct}</span> / ${scores[secId].total}`;
+}
+
+// Build all MCQs
+Object.keys(allMCQ).forEach(secId => {
+  buildMCQ(secId, allMCQ[secId], `mcq-${secId}`);
+});
+
+// ===================== COST CANVAS =====================
+function drawCostCanvas() {
+  const canvas = document.getElementById('costCanvas');
+  if (!canvas) return;
+  canvas.width = canvas.offsetWidth * devicePixelRatio;
+  canvas.height = 240 * devicePixelRatio;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  const W = canvas.offsetWidth, H = 240;
+  const cx = W/2, cy = H - 28, sx = 68, sy = 78;
+  const toX = w => cx + w * sx;
+  const toY = j => cy - j * sy;
+
+  ctx.fillStyle = '#161922'; ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle = '#2a3045'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0,cy); ctx.lineTo(W,cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx,0); ctx.lineTo(cx,H); ctx.stroke();
+
+  ctx.strokeStyle = '#4fffb0'; ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  for(let w=-3;w<=3;w+=0.02){const x=toX(w),y=toY(w*w);w<=-3?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+  ctx.stroke();
+
+  ctx.font = '11px IBM Plex Mono'; ctx.fillStyle = '#7a84a0';
+  ctx.fillText('θ (parameter)', W-115, cy-8);
+  ctx.fillText('J(θ)', cx+8, 16);
+
+  ctx.beginPath(); ctx.arc(cx, cy, 6, 0, Math.PI*2);
+  ctx.fillStyle = '#4fffb0'; ctx.fill();
+  ctx.fillStyle = '#4fffb0'; ctx.fillText('Global Minimum', cx+10, cy-8);
+
+  const ptW=2.0, ptJ=ptW*ptW;
+  const ptX=toX(ptW), ptY=toY(ptJ);
+  ctx.beginPath(); ctx.arc(ptX, ptY, 5, 0, Math.PI*2);
+  ctx.fillStyle = '#ff6b6b'; ctx.fill();
+  ctx.strokeStyle='#ff6b6b';ctx.lineWidth=1;ctx.setLineDash([3,3]);
+  ctx.beginPath();ctx.moveTo(ptX,ptY);ctx.lineTo(ptX,cy);ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='#ff6b6b';ctx.font='10px IBM Plex Mono';
+  ctx.fillText('current position', ptX+6, ptY-8);
+
+  const arr = [-1.5, -0.8, 0.3, 1.5];
+  arr.forEach(w=>{
+    const px=toX(w),py=toY(w*w);
+    const grad=2*w, dir=grad>0?-1:1;
+    const aLen=22;
+    ctx.strokeStyle='rgba(255,209,102,0.5)';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(px+dir*aLen,py);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(px+dir*aLen,py);ctx.lineTo(px+dir*aLen-dir*5,py-4);ctx.lineTo(px+dir*aLen-dir*5,py+4);ctx.closePath();
+    ctx.fillStyle='rgba(255,209,102,0.5)';ctx.fill();
+  });
+  ctx.fillStyle='rgba(255,209,102,0.7)';ctx.font='9px IBM Plex Mono';
+  ctx.fillText('← descent direction →', cx-60, cy-40);
+}
+
+// ===================== GRADIENT CANVAS =====================
+let gradCtx, gradW, gradH;
+function initGradCanvas() {
+  const canvas = document.getElementById('gradCanvas');
+  if (!canvas) return;
+  canvas.width = canvas.offsetWidth * devicePixelRatio;
+  canvas.height = 260 * devicePixelRatio;
+  gradCtx = canvas.getContext('2d');
+  gradCtx.scale(devicePixelRatio, devicePixelRatio);
+  gradW = canvas.offsetWidth; gradH = 260;
+  drawGradCanvas(null);
+  canvas.addEventListener('mousemove', e => {
+    const rect = canvas.getBoundingClientRect();
+    drawGradCanvas((e.clientX-rect.left-gradW/2)/65);
+  });
+  canvas.addEventListener('mouseleave', () => drawGradCanvas(null));
+}
+
+function drawGradCanvas(hoverW) {
+  if (!gradCtx) return;
+  const ctx=gradCtx,W=gradW,H=gradH;
+  const cx=W/2,cy=H-28,sx=65,sy=50;
+  const toX=w=>cx+w*sx, toY=j=>cy-j*sy;
+  ctx.fillStyle='#161922';ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='#2a3045';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(0,cy);ctx.lineTo(W,cy);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx,0);ctx.lineTo(cx,H);ctx.stroke();
+  ctx.strokeStyle='#4fffb0';ctx.lineWidth=2.5;
+  ctx.beginPath();
+  for(let w=-4;w<=4;w+=0.02){const x=toX(w),y=toY(w*w);w<=-4?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+  ctx.stroke();
+  ctx.font='11px IBM Plex Mono';ctx.fillStyle='#7a84a0';
+  ctx.fillText('w',W-16,cy-6);ctx.fillText('J(w)=w²',cx+6,16);
+
+  if(hoverW!==null&&Math.abs(hoverW)<=3.5){
+    const j=hoverW*hoverW, grad=2*hoverW;
+    const px=toX(hoverW),py=toY(j);
+    const tlen=75,angle=Math.atan2(-grad*sy,sx);
+    ctx.strokeStyle='#ffd166';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(px-Math.cos(angle)*tlen,py+Math.sin(angle)*tlen);ctx.lineTo(px+Math.cos(angle)*tlen,py-Math.sin(angle)*tlen);ctx.stroke();
+    ctx.beginPath();ctx.arc(px,py,6,0,Math.PI*2);ctx.fillStyle='#ff6b6b';ctx.fill();
+    const dir=grad>0?-1:1, ax=px+dir*40;
+    ctx.strokeStyle='#4fffb0';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(ax,py);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(ax,py);ctx.lineTo(ax-dir*7,py-5);ctx.lineTo(ax-dir*7,py+5);ctx.closePath();ctx.fillStyle='#4fffb0';ctx.fill();
+    const ox=px>W*0.7?-130:10;
+    ctx.fillStyle='#ffd166';ctx.font='11px IBM Plex Mono';
+    ctx.fillText(`w = ${hoverW.toFixed(2)}`,px+ox,py-22);
+    ctx.fillText(`gradient = ${grad.toFixed(2)}`,px+ox,py-8);
+    ctx.fillStyle=grad>0?'#ff6b6b':'#4fffb0';
+    ctx.fillText(grad>0?'→ step left (subtract +ve)':'→ step right (subtract -ve)',px+ox,py+10);
+  } else {
+    ctx.fillStyle='#7a84a0';ctx.font='11px IBM Plex Mono';
+    ctx.fillText('hover over the curve to explore →',cx-100,20);
+  }
+}
+
+// ===================== LEARNING RATE =====================
+let lrAnimId=null;
+function selectLR(idx){
+  [0,1,2].forEach(i=>document.getElementById('lr'+i).classList.toggle('active',i===idx));
+  animateLR([0.001,0.15,0.95][idx]);
+}
+function animateLR(alpha){
+  if(lrAnimId)clearTimeout(lrAnimId);
+  const canvas=document.getElementById('lrCanvas');
+  if(!canvas)return;
+  canvas.width=canvas.offsetWidth*devicePixelRatio;canvas.height=240*devicePixelRatio;
+  const ctx=canvas.getContext('2d');ctx.scale(devicePixelRatio,devicePixelRatio);
+  const W=canvas.offsetWidth,H=240,cx=W/2,cy=H-28,sx=65,sy=52;
+  const toX=w=>cx+w*sx,toY=j=>cy-j*sy;
+  let w=3.0,iter=0,trail=[];
+  function frame(){
+    ctx.fillStyle='#161922';ctx.fillRect(0,0,W,H);
+    ctx.strokeStyle='#2a3045';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(0,cy);ctx.lineTo(W,cy);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx,0);ctx.lineTo(cx,H);ctx.stroke();
+    ctx.strokeStyle='#4fffb0';ctx.lineWidth=2;
+    ctx.beginPath();
+    for(let v=-4;v<=4;v+=0.02){const x=toX(v),y=toY(v*v);v<=-4?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+    ctx.stroke();
+    if(trail.length>1){
+      ctx.strokeStyle='rgba(255,107,107,0.4)';ctx.lineWidth=1.5;
+      ctx.beginPath();trail.forEach((pt,i)=>i===0?ctx.moveTo(toX(pt.w),toY(pt.j)):ctx.lineTo(toX(pt.w),toY(pt.j)));ctx.stroke();
+    }
+    const j=w*w,px=toX(w),py=toY(j);
+    ctx.beginPath();ctx.arc(px,py,7,0,Math.PI*2);ctx.fillStyle='#ff6b6b';ctx.fill();
+    ctx.font='11px IBM Plex Mono';ctx.fillStyle='#7a84a0';
+    ctx.fillText(`α=${alpha}  iter=${iter}  J=${j.toFixed(5)}`,12,18);
+    document.getElementById('lrIter').textContent=iter;
+    document.getElementById('lrCost').textContent=j.toFixed(6);
+    const converged=j<0.00001,diverged=Math.abs(w)>15;
+    document.getElementById('lrStatusText').textContent=converged?'✓ Converged':diverged?'✗ Diverged':'Running…';
+    if(!converged&&!diverged&&iter<200){
+      trail.push({w,j});w=w-alpha*2*w;iter++;
+      lrAnimId=setTimeout(()=>requestAnimationFrame(frame),alpha<0.01?5:70);
+    }
+  }
+  frame();
+}
+
+// ===================== LIVE DEMO =====================
+let demoW=3,demoStepN=0,demoRunning=false,demoAnimId=null,demoTrail=[];
+function resetDemo(){
+  demoRunning=false;if(demoAnimId)clearTimeout(demoAnimId);
+  demoStepN=0;demoTrail=[];
+  demoW=parseFloat(document.getElementById('startSlider').value);
+  document.getElementById('demoMsg').style.display='none';
+  document.getElementById('divergeMsg').style.display='none';
+  upd();drawDemoCanvas();
+}
+function upd(){
+  document.getElementById('demoStep').textContent=demoStepN;
+  document.getElementById('demoW').textContent=demoW.toFixed(5);
+  document.getElementById('demoCost').textContent=(demoW*demoW).toFixed(5);
+  document.getElementById('demoGrad').textContent=(2*demoW).toFixed(5);
+}
+function stepDemo(){
+  const alpha=parseFloat(document.getElementById('alphaSlider').value);
+  const grad=2*demoW, step=alpha*grad;
+  demoTrail.push({w:demoW,j:demoW*demoW});
+  document.getElementById('demoStepTaken').textContent=`−${step.toFixed(5)}`;
+  demoW=demoW-step;demoStepN++;upd();drawDemoCanvas();
+  if(demoW*demoW<0.00001){document.getElementById('demoMsg').style.display='block';demoRunning=false;}
+  if(Math.abs(demoW)>50){document.getElementById('divergeMsg').style.display='block';demoRunning=false;}
+}
+function runDemo(){
+  if(demoRunning){demoRunning=false;return;}
+  demoRunning=true;
+  function tick(){
+    if(!demoRunning||demoW*demoW<0.00001||Math.abs(demoW)>50||demoStepN>600){demoRunning=false;return;}
+    stepDemo();demoAnimId=setTimeout(tick,60);
+  }tick();
+}
+function drawDemoCanvas(){
+  const canvas=document.getElementById('demoCanvas');if(!canvas)return;
+  canvas.width=canvas.offsetWidth*devicePixelRatio;canvas.height=300*devicePixelRatio;
+  const ctx=canvas.getContext('2d');ctx.scale(devicePixelRatio,devicePixelRatio);
+  const W=canvas.offsetWidth,H=300,cx=W/2,cy=H-28,sx=60,sy=45;
+  const toX=w=>cx+w*sx,toY=j=>cy-j*sy;
+  ctx.fillStyle='#161922';ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='#2a3045';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(0,cy);ctx.lineTo(W,cy);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx,0);ctx.lineTo(cx,H);ctx.stroke();
+  ctx.font='11px IBM Plex Mono';ctx.fillStyle='#7a84a0';
+  ctx.fillText('w',W-16,cy-6);ctx.fillText('J(w)=w²',cx+6,18);
+  ctx.strokeStyle='#4fffb0';ctx.lineWidth=2.5;
+  ctx.beginPath();
+  for(let v=-5;v<=5;v+=0.02){const x=toX(v),y=toY(v*v);v<=-5?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+  ctx.stroke();
+  if(demoTrail.length>1){
+    ctx.strokeStyle='rgba(255,107,107,0.3)';ctx.lineWidth=1.5;
+    ctx.beginPath();demoTrail.forEach((pt,i)=>i===0?ctx.moveTo(toX(pt.w),toY(pt.j)):ctx.lineTo(toX(pt.w),toY(pt.j)));
+    if(demoStepN>0)ctx.lineTo(toX(demoW),toY(demoW*demoW));ctx.stroke();
+  }
+  demoTrail.forEach((pt,i)=>{
+    ctx.beginPath();ctx.arc(toX(pt.w),toY(pt.j),3,0,Math.PI*2);
+    ctx.fillStyle=`rgba(255,107,107,${0.2+0.7*(i/Math.max(demoTrail.length,1))})`;ctx.fill();
+  });
+  const px=toX(demoW),py=toY(demoW*demoW);
+  ctx.beginPath();ctx.arc(px,py,8,0,Math.PI*2);ctx.fillStyle='#ff6b6b';ctx.fill();
+  ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();
+  ctx.fillStyle='#fff';ctx.font='10px IBM Plex Mono';
+  const lx=px>W-80?px-70:px+10;
+  ctx.fillText(`w=${demoW.toFixed(3)}`,lx,py-6);
+}
+
+// ===================== LOCAL MIN CANVAS =====================
+function drawLocalMinCanvas(){
+  const canvas=document.getElementById('localMinCanvas');if(!canvas)return;
+  canvas.width=canvas.offsetWidth*devicePixelRatio;canvas.height=220*devicePixelRatio;
+  const ctx=canvas.getContext('2d');ctx.scale(devicePixelRatio,devicePixelRatio);
+  const W=canvas.offsetWidth,H=220;
+  ctx.fillStyle='#161922';ctx.fillRect(0,0,W,H);
+  const scaleX=W/8,offY=H*0.55;
+  const f=x=>0.25*Math.pow(x-1,4)-0.5*Math.pow(x-1,2)+0.15*(x-1)+0.5;
+  ctx.strokeStyle='#4fffb0';ctx.lineWidth=2.5;ctx.beginPath();
+  for(let i=0;i<=W;i++){const xv=(i/W)*8-1,y=offY-f(xv)*120;i===0?ctx.moveTo(i,y):ctx.lineTo(i,y);}
+  ctx.stroke();
+  ctx.strokeStyle='#2a3045';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(0,offY+60);ctx.lineTo(W,offY+60);ctx.stroke();
+  // Mark local min around x=2.5, global min around x=5.5 (in 0-8 range)
+  const lmX=2.3,lmXv=(lmX/8)*W;
+  const gmX=5.7,gmXv=(gmX/8)*W;
+  const lmY=offY-f(lmX)*120,gmY=offY-f(gmX)*120;
+  ctx.beginPath();ctx.arc(lmXv,lmY,5,0,Math.PI*2);ctx.fillStyle='#ffd166';ctx.fill();
+  ctx.beginPath();ctx.arc(gmXv,gmY,5,0,Math.PI*2);ctx.fillStyle='#4fffb0';ctx.fill();
+  ctx.font='11px IBM Plex Mono';
+  ctx.fillStyle='#ffd166';ctx.fillText('local min',lmXv-30,lmY-10);
+  ctx.fillStyle='#4fffb0';ctx.fillText('global min',gmXv-35,gmY-10);
+  // Start points
+  const sp1X=0.8,sp1Xv=(sp1X/8)*W,sp1Y=offY-f(sp1X)*120;
+  const sp2X=4.5,sp2Xv=(sp2X/8)*W,sp2Y=offY-f(sp2X)*120;
+  ctx.beginPath();ctx.arc(sp1Xv,sp1Y,6,0,Math.PI*2);ctx.fillStyle='#ff6b6b';ctx.fill();
+  ctx.beginPath();ctx.arc(sp2Xv,sp2Y,6,0,Math.PI*2);ctx.fillStyle='#ff6b6b';ctx.fill();
+  ctx.fillStyle='#ff6b6b';ctx.font='10px IBM Plex Mono';
+  ctx.fillText('start A → local min',sp1Xv-30,sp1Y-12);
+  ctx.fillText('start B → global min',sp2Xv-5,sp2Y-12);
+  // Arrows
+  [[sp1Xv,sp1Y,lmXv,lmY],[sp2Xv,sp2Y,gmXv,gmY]].forEach(([x1,y1,x2,y2])=>{
+    ctx.strokeStyle='rgba(255,107,107,0.5)';ctx.lineWidth=1.5;ctx.setLineDash([4,3]);
+    ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();ctx.setLineDash([]);
+  });
+}
+
+// ===================== INIT =====================
+document.getElementById('progressBar').style.width=(1/sections.length*100)+'%';
+window.addEventListener('resize',()=>{
+  const v=document.querySelector('section.visible');if(!v)return;
+  const id=v.id;
+  if(id==='cost')drawCostCanvas();
+  if(id==='gradient')initGradCanvas();
+  if(id==='demo')drawDemoCanvas();
+  if(id==='challenges')drawLocalMinCanvas();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gradient Descent — Interactive Explainer</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #161922;
+    --surface2: #1e2330;
+    --border: #2a3045;
+    --accent: #4fffb0;
+    --accent2: #ff6b6b;
+    --accent3: #ffd166;
+    --text: #e8eaf0;
+    --text-muted: #7a84a0;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-weight: 300;
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(13,15,20,0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 0;
+    padding: 0 2rem; height: 56px;
+    overflow-x: auto;
+  }
+  .nav-item {
+    padding: 0 1.1rem;
+    height: 56px;
+    display: flex; align-items: center;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    transition: color 0.2s, border-color 0.2s;
+    letter-spacing: 0.04em;
+  }
+  .nav-item:hover { color: var(--text); }
+  .nav-item.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* SECTIONS */
+  section {
+    max-width: 860px; margin: 0 auto;
+    padding: 6rem 2rem 4rem;
+    display: none;
+  }
+  section.visible { display: block; }
+
+  /* TYPOGRAPHY */
+  .section-label {
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    color: var(--accent);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 0.6rem;
+  }
+  h1 {
+    font-family: var(--mono);
+    font-size: clamp(1.8rem, 4vw, 2.6rem);
+    font-weight: 600;
+    line-height: 1.2;
+    margin-bottom: 1.2rem;
+    color: var(--text);
+  }
+  h2 {
+    font-family: var(--mono);
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--accent);
+    margin: 2rem 0 0.8rem;
+  }
+  p { color: #c0c8dc; margin-bottom: 1rem; font-size: 0.95rem; }
+  strong { color: var(--text); font-weight: 600; }
+
+  /* CARDS */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin: 1.2rem 0;
+  }
+  .card-highlight {
+    border-left: 3px solid var(--accent);
+    background: rgba(79,255,176,0.04);
+  }
+  .card-warn {
+    border-left: 3px solid var(--accent3);
+    background: rgba(255,209,102,0.04);
+  }
+
+  /* FORMULA BOX */
+  .formula {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1.2rem 1.5rem;
+    font-family: var(--mono);
+    font-size: 1.05rem;
+    margin: 1rem 0;
+    text-align: center;
+    color: var(--accent3);
+    letter-spacing: 0.02em;
+  }
+  .formula .part { display: inline-block; }
+  .formula .lbl {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    display: block;
+    text-align: center;
+    margin-top: 0.15rem;
+    letter-spacing: 0.08em;
+  }
+  .formula-annotated {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0.3rem;
+    flex-wrap: wrap;
+    padding: 1.2rem;
+  }
+
+  /* CANVAS WRAPPER */
+  .canvas-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 1.2rem 0;
+    position: relative;
+  }
+  canvas { display: block; width: 100%; border-radius: 4px; }
+
+  /* CONTROLS */
+  .controls {
+    display: flex; gap: 1rem; flex-wrap: wrap; align-items: center;
+    margin: 1rem 0;
+  }
+  .control-group {
+    display: flex; flex-direction: column; gap: 0.3rem; flex: 1; min-width: 160px;
+  }
+  .control-group label {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    letter-spacing: 0.06em;
+  }
+  .control-group label span {
+    color: var(--accent3);
+    font-weight: 600;
+  }
+  input[type=range] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    background: var(--accent);
+    border-radius: 50%;
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+  input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+
+  .btn {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    padding: 0.55rem 1.2rem;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    background: transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+  }
+  .btn:hover { background: var(--accent); color: var(--bg); }
+  .btn-row { display: flex; gap: 0.7rem; flex-wrap: wrap; margin: 0.8rem 0; }
+
+  /* STATUS BAR */
+  .status-bar {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.5rem 1rem;
+    display: flex; gap: 2rem; flex-wrap: wrap;
+    margin-top: 0.6rem;
+  }
+  .status-bar .val { color: var(--accent3); font-weight: 600; }
+
+  /* ANALOGY GRID */
+  .analogy-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem; margin: 1.2rem 0;
+  }
+  .analogy-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.1rem;
+  }
+  .analogy-item .icon { font-size: 1.6rem; margin-bottom: 0.5rem; }
+  .analogy-item .concept { font-family: var(--mono); font-size: 0.72rem; color: var(--accent); letter-spacing: 0.08em; margin-bottom: 0.3rem; }
+  .analogy-item .meaning { font-size: 0.85rem; color: #c0c8dc; }
+
+  /* STEP TRACKER */
+  .steps-list { list-style: none; margin: 1rem 0; }
+  .steps-list li {
+    display: flex; gap: 1rem; align-items: flex-start;
+    padding: 0.8rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .steps-list li:last-child { border-bottom: none; }
+  .step-num {
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    color: var(--accent);
+    font-weight: 600;
+    min-width: 28px;
+  }
+  .step-text { font-size: 0.9rem; color: #c0c8dc; }
+
+  /* LEARNING RATE DEMO */
+  .lr-scenarios {
+    display: grid;
+    grid-template-columns: repeat(3,1fr);
+    gap: 0.8rem; margin: 1rem 0;
+  }
+  .lr-scenario {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.8rem;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    text-align: center;
+  }
+  .lr-scenario:hover { border-color: var(--accent); }
+  .lr-scenario.active { border-color: var(--accent); background: rgba(79,255,176,0.06); }
+  .lr-scenario .lr-val { font-family: var(--mono); font-size: 1rem; color: var(--accent3); font-weight: 600; }
+  .lr-scenario .lr-label { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.2rem; }
+
+  /* QUIZ */
+  .quiz-q { font-size: 0.95rem; color: var(--text); margin-bottom: 0.8rem; font-weight: 400; }
+  .quiz-opts { display: flex; flex-direction: column; gap: 0.5rem; margin-bottom: 1rem; }
+  .quiz-opt {
+    font-family: var(--sans);
+    font-size: 0.88rem;
+    padding: 0.7rem 1rem;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    color: #c0c8dc;
+    transition: border-color 0.2s, background 0.2s;
+    text-align: left;
+  }
+  .quiz-opt:hover { border-color: var(--accent); }
+  .quiz-opt.correct { border-color: var(--accent); background: rgba(79,255,176,0.1); color: var(--accent); }
+  .quiz-opt.wrong { border-color: var(--accent2); background: rgba(255,107,107,0.1); color: var(--accent2); }
+  .quiz-feedback {
+    font-size: 0.85rem;
+    padding: 0.7rem 1rem;
+    border-radius: 4px;
+    margin-top: 0.5rem;
+    display: none;
+  }
+  .quiz-feedback.show { display: block; }
+  .quiz-feedback.ok { background: rgba(79,255,176,0.1); color: var(--accent); border: 1px solid var(--accent); }
+  .quiz-feedback.bad { background: rgba(255,107,107,0.1); color: var(--accent2); border: 1px solid var(--accent2); }
+
+  /* PROGRESS */
+  .progress-bar-wrap {
+    height: 3px; background: var(--border); border-radius: 2px;
+    position: fixed; top: 56px; left: 0; right: 0; z-index: 99;
+  }
+  .progress-bar-fill {
+    height: 100%; background: var(--accent); border-radius: 2px;
+    transition: width 0.3s;
+  }
+
+  /* HERO */
+  .hero { padding-top: 7rem; }
+  .hero-tag {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 0.68rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 1px solid rgba(79,255,176,0.3);
+    border-radius: 3px;
+    padding: 0.2rem 0.6rem;
+    margin-bottom: 1rem;
+  }
+  .hero h1 { font-size: clamp(2.2rem, 6vw, 3.5rem); }
+  .hero p { font-size: 1.05rem; max-width: 560px; }
+  .hero-nav { display: flex; gap: 0.8rem; flex-wrap: wrap; margin-top: 2rem; }
+  .hero-btn {
+    font-family: var(--mono);
+    font-size: 0.78rem;
+    letter-spacing: 0.06em;
+    padding: 0.7rem 1.4rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+  .hero-btn-primary {
+    background: var(--accent);
+    color: var(--bg);
+    border: none;
+    font-weight: 600;
+  }
+  .hero-btn-primary:hover { opacity: 0.85; }
+  .hero-btn-secondary {
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+  }
+  .hero-btn-secondary:hover { border-color: var(--text-muted); color: var(--text); }
+
+  /* SECTION NUMBERS */
+  .sec-num {
+    font-family: var(--mono);
+    font-size: 4rem;
+    font-weight: 600;
+    color: var(--border);
+    line-height: 1;
+    margin-bottom: -0.5rem;
+  }
+
+  @media (max-width: 600px) {
+    .lr-scenarios { grid-template-columns: 1fr; }
+    nav { padding: 0 0.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressBar"></div></div>
+
+<nav id="mainNav">
+  <div class="nav-item active" data-sec="home">Home</div>
+  <div class="nav-item" data-sec="intuition">01 Intuition</div>
+  <div class="nav-item" data-sec="cost">02 Cost Function</div>
+  <div class="nav-item" data-sec="gradient">03 Gradient</div>
+  <div class="nav-item" data-sec="update">04 Update Rule</div>
+  <div class="nav-item" data-sec="lr">05 Learning Rate</div>
+  <div class="nav-item" data-sec="demo">06 Live Demo</div>
+  <div class="nav-item" data-sec="quiz">07 Quiz</div>
+</nav>
+
+<!-- HOME -->
+<section id="home" class="visible hero">
+  <div class="hero-tag">AI-302 · Optimization</div>
+  <h1>Gradient<br>Descent</h1>
+  <p>The algorithm at the heart of machine learning. Interactive, step-by-step — built for HTU's second-year AI students.</p>
+  <div class="hero-nav">
+    <button class="hero-btn hero-btn-primary" onclick="goTo('intuition')">Start Learning →</button>
+    <button class="hero-btn hero-btn-secondary" onclick="goTo('demo')">Skip to Demo</button>
+  </div>
+
+  <div class="analogy-grid" style="margin-top:3rem;">
+    <div class="analogy-item" onclick="goTo('intuition')" style="cursor:pointer;">
+      <div class="icon">⛰️</div>
+      <div class="concept">The Mountain</div>
+      <div class="meaning">A visual intuition for what we're trying to do</div>
+    </div>
+    <div class="analogy-item" onclick="goTo('cost')" style="cursor:pointer;">
+      <div class="icon">📉</div>
+      <div class="concept">Cost Function</div>
+      <div class="meaning">The landscape our model needs to navigate</div>
+    </div>
+    <div class="analogy-item" onclick="goTo('gradient')" style="cursor:pointer;">
+      <div class="icon">📐</div>
+      <div class="concept">The Gradient</div>
+      <div class="meaning">Your compass on that landscape</div>
+    </div>
+    <div class="analogy-item" onclick="goTo('update')" style="cursor:pointer;">
+      <div class="icon">🔄</div>
+      <div class="concept">Update Rule</div>
+      <div class="meaning">One equation to rule them all</div>
+    </div>
+    <div class="analogy-item" onclick="goTo('lr')" style="cursor:pointer;">
+      <div class="icon">⚡</div>
+      <div class="concept">Learning Rate</div>
+      <div class="meaning">The trickiest hyperparameter</div>
+    </div>
+    <div class="analogy-item" onclick="goTo('demo')" style="cursor:pointer;">
+      <div class="icon">🎮</div>
+      <div class="concept">Live Simulation</div>
+      <div class="meaning">Watch it run, then control it yourself</div>
+    </div>
+  </div>
+</section>
+
+<!-- INTUITION -->
+<section id="intuition">
+  <div class="sec-num">01</div>
+  <div class="section-label">The Big Picture</div>
+  <h1>The Mountain Analogy</h1>
+  <p>Imagine you are standing somewhere on a foggy mountain at night. You want to reach the lowest valley — but you can't see far ahead. What do you do?</p>
+  <p><strong>You feel the slope beneath your feet, and take a small step downhill.</strong> Repeat until you can't go any lower.</p>
+
+  <div class="card card-highlight">
+    <p style="margin:0">That's gradient descent in one sentence: <strong>repeatedly take small steps in the direction that reduces cost</strong>, until you reach the minimum.</p>
+  </div>
+
+  <h2>Every Part of the Analogy Maps to Math</h2>
+  <div class="analogy-grid">
+    <div class="analogy-item">
+      <div class="icon">🌄</div>
+      <div class="concept">Mountain / Valley</div>
+      <div class="meaning">The <strong>cost function J(θ)</strong> plotted against model parameters</div>
+    </div>
+    <div class="analogy-item">
+      <div class="icon">📍</div>
+      <div class="concept">Your Position</div>
+      <div class="meaning">Current values of the <strong>parameters θ</strong> (e.g., slope m and intercept b)</div>
+    </div>
+    <div class="analogy-item">
+      <div class="icon">⛅</div>
+      <div class="concept">The Fog</div>
+      <div class="meaning">We only know the gradient <strong>locally</strong> — not the whole landscape</div>
+    </div>
+    <div class="analogy-item">
+      <div class="icon">📏</div>
+      <div class="concept">Steepness of Slope</div>
+      <div class="meaning">The <strong>gradient ∇J</strong> — tells us how fast cost changes</div>
+    </div>
+    <div class="analogy-item">
+      <div class="icon">👟</div>
+      <div class="concept">Step Size</div>
+      <div class="meaning">The <strong>learning rate α</strong> — how big each step is</div>
+    </div>
+    <div class="analogy-item">
+      <div class="icon">🏁</div>
+      <div class="concept">Bottom of Valley</div>
+      <div class="meaning">The <strong>minimum cost</strong> — optimal parameters</div>
+    </div>
+  </div>
+
+  <div class="card card-warn" style="margin-top:1.5rem;">
+    <strong>Key insight:</strong> We always move <em>opposite</em> to the gradient direction. The gradient points uphill — so we subtract it to go downhill.
+  </div>
+
+  <div class="btn-row">
+    <button class="btn" onclick="goTo('cost')">Next: Cost Function →</button>
+  </div>
+</section>
+
+<!-- COST FUNCTION -->
+<section id="cost">
+  <div class="sec-num">02</div>
+  <div class="section-label">What We're Minimizing</div>
+  <h1>The Cost Function</h1>
+  <p>Before we can descend, we need something to descend on. The <strong>cost function J(θ)</strong> measures how wrong our model is — it converts all the errors across the entire dataset into a single number.</p>
+
+  <h2>Mean Squared Error — The Classic Choice</h2>
+  <p>For linear regression, we use MSE:</p>
+  <div class="formula">
+    J(θ) = (1/2n) · Σ (ŷᵢ − yᵢ)²
+  </div>
+  <p>Where <strong>ŷᵢ</strong> is the predicted value, <strong>yᵢ</strong> is the actual value, and <strong>n</strong> is the number of data points. The ½ is just there to make the derivative cleaner.</p>
+
+  <h2>Visualising the Cost Landscape</h2>
+  <p>Click anywhere on the canvas below to place the model at that cost level. The goal is always to reach the bottom.</p>
+  <div class="canvas-wrap">
+    <canvas id="costCanvas" height="240"></canvas>
+  </div>
+
+  <div class="card">
+    <p style="margin:0"><strong>Why not just pick the lowest point directly?</strong> In real models, cost functions have <em>hundreds or thousands of dimensions</em> (one per parameter). We can't visualise or analytically solve them — we need an iterative algorithm.</p>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn" onclick="goTo('intuition')">← Back</button>
+    <button class="btn" onclick="goTo('gradient')">Next: The Gradient →</button>
+  </div>
+</section>
+
+<!-- GRADIENT -->
+<section id="gradient">
+  <div class="sec-num">03</div>
+  <div class="section-label">Direction Finder</div>
+  <h1>The Gradient</h1>
+  <p>The gradient is the <strong>slope of the cost function</strong> at your current position. It's the first derivative — how much the cost changes when you tweak a parameter slightly.</p>
+
+  <h2>First Derivative — A Refresher</h2>
+  <p>For a function f(w), the derivative f'(w) tells you the slope at point w:</p>
+  <div class="formula">
+    f'(w) = df/dw = lim[Δw→0] (f(w+Δw) − f(w)) / Δw
+  </div>
+
+  <div class="canvas-wrap">
+    <canvas id="gradCanvas" height="260"></canvas>
+    <p style="font-family:var(--mono);font-size:0.7rem;color:var(--text-muted);margin-top:0.5rem;text-align:center;">
+      Move your mouse over the curve to see the tangent (gradient) at each point
+    </p>
+  </div>
+
+  <h2>Positive vs. Negative Gradient</h2>
+  <div class="analogy-grid">
+    <div class="analogy-item" style="border-left:3px solid var(--accent2);">
+      <div class="concept" style="color:var(--accent2);">Positive Gradient</div>
+      <div class="meaning">Slope goes upward → we are to the RIGHT of the minimum → step LEFT (subtract)</div>
+    </div>
+    <div class="analogy-item" style="border-left:3px solid var(--accent);">
+      <div class="concept">Negative Gradient</div>
+      <div class="meaning">Slope goes downward → we are to the LEFT of the minimum → step RIGHT (subtract a negative = add)</div>
+    </div>
+  </div>
+
+  <div class="card card-highlight">
+    <strong>Either way, subtracting the gradient always moves us toward the minimum.</strong> This is why the update rule uses a minus sign.
+  </div>
+
+  <div class="btn-row">
+    <button class="btn" onclick="goTo('cost')">← Back</button>
+    <button class="btn" onclick="goTo('update')">Next: Update Rule →</button>
+  </div>
+</section>
+
+<!-- UPDATE RULE -->
+<section id="update">
+  <div class="sec-num">04</div>
+  <div class="section-label">The Core Equation</div>
+  <h1>The Update Rule</h1>
+  <p>Everything in gradient descent collapses into one equation, applied once per iteration:</p>
+
+  <div class="formula formula-annotated" style="font-size:1.3rem; padding: 1.8rem;">
+    <div class="part">θ<sub>new</sub><span class="lbl">parameter (new)</span></div>
+    <div class="part" style="color:var(--text);margin:0 0.5rem;">=</div>
+    <div class="part">θ<span class="lbl">parameter (old)</span></div>
+    <div class="part" style="color:var(--text);margin:0 0.5rem;">−</div>
+    <div class="part" style="color:var(--accent2);">α<span class="lbl">learning rate</span></div>
+    <div class="part" style="color:var(--text);margin:0 0.3rem;">·</div>
+    <div class="part" style="color:#a78bfa;">∂J/∂θ<span class="lbl">gradient of cost</span></div>
+  </div>
+
+  <h2>For Linear Regression (m and b)</h2>
+  <p>Our model is ŷ = mx + b. We have two parameters to update simultaneously:</p>
+  <div class="formula">m = m − α · (∂J/∂m)</div>
+  <div class="formula">b = b − α · (∂J/∂b)</div>
+
+  <div class="card card-warn">
+    <strong>⚠ Important:</strong> Both parameters must be updated <em>simultaneously</em> using the gradients computed at the <em>current</em> values. Don't update m first and then use the new m to compute the gradient for b!
+  </div>
+
+  <h2>The Iteration Process</h2>
+  <ul class="steps-list">
+    <li><span class="step-num">1.</span><span class="step-text">Initialize parameters (e.g., m = 0, b = 0)</span></li>
+    <li><span class="step-num">2.</span><span class="step-text">Compute predictions ŷ = mx + b for all data points</span></li>
+    <li><span class="step-num">3.</span><span class="step-text">Compute cost J = (1/2n)·Σ(ŷᵢ − yᵢ)²</span></li>
+    <li><span class="step-num">4.</span><span class="step-text">Compute gradients ∂J/∂m and ∂J/∂b</span></li>
+    <li><span class="step-num">5.</span><span class="step-text">Update: m ← m − α·∂J/∂m and b ← b − α·∂J/∂b</span></li>
+    <li><span class="step-num">6.</span><span class="step-text">Repeat steps 2–5 until convergence (cost stops decreasing significantly)</span></li>
+  </ul>
+
+  <div class="btn-row">
+    <button class="btn" onclick="goTo('gradient')">← Back</button>
+    <button class="btn" onclick="goTo('lr')">Next: Learning Rate →</button>
+  </div>
+</section>
+
+<!-- LEARNING RATE -->
+<section id="lr">
+  <div class="sec-num">05</div>
+  <div class="section-label">The Critical Hyperparameter</div>
+  <h1>Learning Rate α</h1>
+  <p>The learning rate α controls how large each step is. It's the most important hyperparameter in gradient descent, and getting it wrong breaks the algorithm.</p>
+
+  <h2>Try the Three Scenarios</h2>
+  <div class="lr-scenarios">
+    <div class="lr-scenario active" id="lr0" onclick="selectLR(0)">
+      <div class="lr-val">α = 0.001</div>
+      <div class="lr-label">Too Small</div>
+    </div>
+    <div class="lr-scenario" id="lr1" onclick="selectLR(1)">
+      <div class="lr-val">α = 0.1</div>
+      <div class="lr-label">Just Right</div>
+    </div>
+    <div class="lr-scenario" id="lr2" onclick="selectLR(2)">
+      <div class="lr-val">α = 0.9</div>
+      <div class="lr-label">Too Large</div>
+    </div>
+  </div>
+
+  <div class="canvas-wrap">
+    <canvas id="lrCanvas" height="260"></canvas>
+  </div>
+  <div class="status-bar" id="lrStatus">
+    <span>Iterations: <span class="val" id="lrIter">—</span></span>
+    <span>Cost: <span class="val" id="lrCost">—</span></span>
+    <span>Status: <span class="val" id="lrStatusText">Select a scenario above</span></span>
+  </div>
+
+  <div class="card" style="margin-top:1rem;">
+    <p style="margin:0 0 0.5rem;font-weight:600;">Rules of thumb for choosing α:</p>
+    <ul style="padding-left:1.2rem;color:#c0c8dc;font-size:0.9rem;line-height:2;">
+      <li>Start with α = 0.01 or 0.001 and adjust</li>
+      <li>If cost is oscillating or increasing, α is too large</li>
+      <li>If cost decreases but very slowly over thousands of iterations, try increasing α</li>
+      <li>Plot cost vs. iteration — it should decrease smoothly</li>
+    </ul>
+  </div>
+
+  <div class="btn-row">
+    <button class="btn" onclick="goTo('update')">← Back</button>
+    <button class="btn" onclick="goTo('demo')">Next: Live Demo →</button>
+  </div>
+</section>
+
+<!-- DEMO -->
+<section id="demo">
+  <div class="sec-num">06</div>
+  <div class="section-label">See it Run</div>
+  <h1>Live Simulation</h1>
+  <p>A simple cost function J(w) = w². The minimum is at w = 0. Adjust the starting point and learning rate, then watch gradient descent find it.</p>
+
+  <div class="controls">
+    <div class="control-group">
+      <label>Starting w: <span id="startVal">3.0</span></label>
+      <input type="range" id="startSlider" min="-4" max="4" step="0.1" value="3" oninput="document.getElementById('startVal').textContent=parseFloat(this.value).toFixed(1);resetDemo()">
+    </div>
+    <div class="control-group">
+      <label>Learning rate α: <span id="alphaVal">0.10</span></label>
+      <input type="range" id="alphaSlider" min="0.01" max="0.95" step="0.01" value="0.1" oninput="document.getElementById('alphaVal').textContent=parseFloat(this.value).toFixed(2);resetDemo()">
+    </div>
+  </div>
+
+  <div class="canvas-wrap">
+    <canvas id="demoCanvas" height="300"></canvas>
+  </div>
+
+  <div class="status-bar">
+    <span>Step: <span class="val" id="demoStep">0</span></span>
+    <span>w: <span class="val" id="demoW">—</span></span>
+    <span>J(w): <span class="val" id="demoCost">—</span></span>
+    <span>Gradient: <span class="val" id="demoGrad">—</span></span>
+  </div>
+
+  <div class="btn-row" style="margin-top:1rem;">
+    <button class="btn" id="btnStep" onclick="stepDemo()">Step Once</button>
+    <button class="btn" id="btnRun" onclick="runDemo()">▶ Run</button>
+    <button class="btn" onclick="resetDemo()">Reset</button>
+  </div>
+
+  <div class="card" id="demoMsg" style="display:none;">
+    <p style="margin:0;color:var(--accent);">✓ Converged! The algorithm found the minimum at w ≈ 0.</p>
+  </div>
+
+  <div class="btn-row" style="margin-top:1rem;">
+    <button class="btn" onclick="goTo('lr')">← Back</button>
+    <button class="btn" onclick="goTo('quiz')">Next: Quiz →</button>
+  </div>
+</section>
+
+<!-- QUIZ -->
+<section id="quiz">
+  <div class="sec-num">07</div>
+  <div class="section-label">Check Your Understanding</div>
+  <h1>Quick Quiz</h1>
+  <p>Five questions to test what you've learned. No tricks — just core concepts.</p>
+
+  <div id="quizContainer"></div>
+
+  <div class="btn-row" style="margin-top:2rem;">
+    <button class="btn" onclick="goTo('demo')">← Back to Demo</button>
+    <button class="btn" onclick="goTo('home')">↑ Back to Top</button>
+  </div>
+</section>
+
+<script>
+// ===================== NAVIGATION =====================
+const sections = ['home','intuition','cost','gradient','update','lr','demo','quiz'];
+const navItems = document.querySelectorAll('.nav-item');
+
+function goTo(id) {
+  document.querySelectorAll('section').forEach(s => s.classList.remove('visible'));
+  document.getElementById(id).classList.add('visible');
+  navItems.forEach(n => n.classList.toggle('active', n.dataset.sec === id));
+  const idx = sections.indexOf(id);
+  document.getElementById('progressBar').style.width = ((idx+1)/sections.length*100) + '%';
+  window.scrollTo(0, 0);
+  if (id === 'lr') { setTimeout(() => selectLR(0), 100); }
+  if (id === 'demo') { setTimeout(() => { resetDemo(); }, 100); }
+  if (id === 'cost') { setTimeout(drawCostCanvas, 100); }
+  if (id === 'gradient') { setTimeout(initGradCanvas, 100); }
+}
+
+navItems.forEach(n => n.addEventListener('click', () => goTo(n.dataset.sec)));
+
+// ===================== COST CANVAS =====================
+function drawCostCanvas() {
+  const canvas = document.getElementById('costCanvas');
+  if (!canvas) return;
+  canvas.width = canvas.offsetWidth * devicePixelRatio;
+  canvas.height = 240 * devicePixelRatio;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  const W = canvas.offsetWidth, H = 240;
+  ctx.fillStyle = '#161922'; ctx.fillRect(0,0,W,H);
+
+  // Draw the parabola J(w) = w^2
+  const cx = W/2, cy = H - 30, scale = 70;
+  const toX = w => cx + w * scale;
+  const toY = j => cy - j * 80;
+
+  ctx.strokeStyle = '#2a3045'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0,cy); ctx.lineTo(W,cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx,0); ctx.lineTo(cx,H); ctx.stroke();
+
+  ctx.strokeStyle = '#4fffb0'; ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  for(let w=-3; w<=3; w+=0.02) {
+    const x=toX(w), y=toY(w*w);
+    if(w===-3) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+
+  // Axis labels
+  ctx.font = '11px IBM Plex Mono'; ctx.fillStyle = '#7a84a0';
+  ctx.fillText('θ (parameter)', W-110, cy-8);
+  ctx.fillText('J(θ)', cx+8, 18);
+  ctx.fillStyle = '#4fffb0';
+  ctx.fillText('Minimum', cx-35, cy-6);
+
+  // Dot at minimum
+  ctx.beginPath(); ctx.arc(cx, cy, 6, 0, Math.PI*2);
+  ctx.fillStyle = '#4fffb0'; ctx.fill();
+
+  // Annotations
+  const ptW = 1.8, ptJ = ptW*ptW;
+  const ptX = toX(ptW), ptY = toY(ptJ);
+  ctx.beginPath(); ctx.arc(ptX, ptY, 5, 0, Math.PI*2);
+  ctx.fillStyle = '#ff6b6b'; ctx.fill();
+  ctx.strokeStyle = '#ff6b6b'; ctx.lineWidth = 1.5;
+  ctx.setLineDash([4,3]);
+  ctx.beginPath(); ctx.moveTo(ptX,ptY); ctx.lineTo(ptX,cy); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#ff6b6b'; ctx.font = '11px IBM Plex Mono';
+  ctx.fillText('current position', ptX-10, ptY-10);
+  ctx.fillStyle = '#7a84a0';
+  ctx.fillText('← move here', cx-55, cy-25);
+}
+
+// ===================== GRADIENT CANVAS =====================
+let gradCanvas, gradCtx, gradW, gradH;
+
+function initGradCanvas() {
+  gradCanvas = document.getElementById('gradCanvas');
+  if (!gradCanvas) return;
+  gradCanvas.width = gradCanvas.offsetWidth * devicePixelRatio;
+  gradCanvas.height = 260 * devicePixelRatio;
+  gradCtx = gradCanvas.getContext('2d');
+  gradCtx.scale(devicePixelRatio, devicePixelRatio);
+  gradW = gradCanvas.offsetWidth; gradH = 260;
+  drawGradCanvas(null);
+
+  gradCanvas.addEventListener('mousemove', e => {
+    const rect = gradCanvas.getBoundingClientRect();
+    const mx = (e.clientX - rect.left);
+    const w = (mx - gradW/2) / 70;
+    drawGradCanvas(w);
+  });
+  gradCanvas.addEventListener('mouseleave', () => drawGradCanvas(null));
+}
+
+function drawGradCanvas(hoverW) {
+  if (!gradCtx) return;
+  const ctx = gradCtx, W = gradW, H = gradH;
+  const cx = W/2, cy = H - 30, scale = 70;
+  const toX = w => cx + w * scale;
+  const toY = j => cy - j * 55;
+
+  ctx.fillStyle = '#161922'; ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle = '#2a3045'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0,cy); ctx.lineTo(W,cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx,0); ctx.lineTo(cx,H); ctx.stroke();
+
+  ctx.strokeStyle = '#4fffb0'; ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  for(let w=-3.5; w<=3.5; w+=0.02) {
+    const x=toX(w), y=toY(w*w);
+    if(w<=-3.5) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+
+  ctx.font = '11px IBM Plex Mono'; ctx.fillStyle = '#7a84a0';
+  ctx.fillText('w', W-18, cy-6);
+  ctx.fillText('J(w)=w²', cx+6, 16);
+
+  if (hoverW !== null && hoverW >= -3 && hoverW <= 3) {
+    const j = hoverW * hoverW;
+    const grad = 2 * hoverW; // dJ/dw = 2w
+    const px = toX(hoverW), py = toY(j);
+    const tangentLen = 80;
+    const angle = Math.atan(grad * 55/70);
+    const tx = Math.cos(angle) * tangentLen;
+    const ty = Math.sin(angle) * tangentLen;
+
+    // Tangent line
+    ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(px - tx, py + ty);
+    ctx.lineTo(px + tx, py - ty);
+    ctx.stroke();
+
+    // Point on curve
+    ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI*2);
+    ctx.fillStyle = '#ff6b6b'; ctx.fill();
+
+    // Arrow pointing down-gradient direction
+    const dir = grad > 0 ? -1 : 1;
+    const ax = px + dir * 45, ay = py;
+    ctx.strokeStyle = '#4fffb0'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(px, py); ctx.lineTo(ax, ay);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(ax, ay);
+    ctx.lineTo(ax - dir*8, ay - 6);
+    ctx.lineTo(ax - dir*8, ay + 6);
+    ctx.closePath(); ctx.fillStyle = '#4fffb0'; ctx.fill();
+
+    // Info
+    ctx.fillStyle = '#ffd166'; ctx.font = '11px IBM Plex Mono';
+    ctx.fillText(`w = ${hoverW.toFixed(2)}`, px+10, py-24);
+    ctx.fillText(`gradient = ${grad.toFixed(2)}`, px+10, py-10);
+    ctx.fillStyle = '#4fffb0';
+    ctx.fillText('step direction', ax + dir*5, ay-12);
+  } else {
+    ctx.fillStyle = '#7a84a0'; ctx.font = '11px IBM Plex Mono';
+    ctx.fillText('← hover to see gradient', W/2-70, 20);
+  }
+}
+
+// ===================== LEARNING RATE =====================
+let lrSelected = 0;
+const lrValues = [0.001, 0.1, 0.9];
+const lrLabels = ['Too Small — takes forever', 'Just Right — smooth convergence', 'Too Large — diverges / oscillates'];
+
+function selectLR(idx) {
+  lrSelected = idx;
+  [0,1,2].forEach(i => document.getElementById('lr'+i).classList.toggle('active', i===idx));
+  animateLR(lrValues[idx], lrLabels[idx]);
+}
+
+let lrAnimId = null;
+
+function animateLR(alpha, label) {
+  if (lrAnimId) cancelAnimationFrame(lrAnimId);
+  const canvas = document.getElementById('lrCanvas');
+  if (!canvas) return;
+  canvas.width = canvas.offsetWidth * devicePixelRatio;
+  canvas.height = 260 * devicePixelRatio;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  const W = canvas.offsetWidth, H = 260;
+  const cx = W/2, cy = H - 30, sx = 70, sy = 55;
+  const toX = w => cx + w * sx;
+  const toY = j => cy - j * sy;
+
+  let w = 3.0, iter = 0, trail = [];
+  const maxIter = 120;
+
+  function drawFrame() {
+    ctx.fillStyle = '#161922'; ctx.fillRect(0,0,W,H);
+    ctx.strokeStyle = '#2a3045'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0,cy); ctx.lineTo(W,cy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx,0); ctx.lineTo(cx,H); ctx.stroke();
+
+    ctx.strokeStyle = '#4fffb0'; ctx.lineWidth = 2;
+    ctx.beginPath();
+    for(let v=-3.5; v<=3.5; v+=0.02) {
+      const x=toX(v), y=toY(v*v);
+      v<=-3.49?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+
+    // Trail
+    if (trail.length > 1) {
+      ctx.strokeStyle = 'rgba(255,107,107,0.35)'; ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      trail.forEach((pt,i) => i===0?ctx.moveTo(toX(pt.w),toY(pt.j)):ctx.lineTo(toX(pt.w),toY(pt.j)));
+      ctx.stroke();
+    }
+
+    const j = w*w;
+    const px = toX(w), py = toY(j);
+    ctx.beginPath(); ctx.arc(px, py, 7, 0, Math.PI*2);
+    ctx.fillStyle = '#ff6b6b'; ctx.fill();
+
+    const converged = Math.abs(j) < 0.0001;
+    document.getElementById('lrIter').textContent = iter;
+    document.getElementById('lrCost').textContent = j.toFixed(6);
+    document.getElementById('lrStatusText').textContent = converged ? '✓ Converged' : (Math.abs(w) > 20 ? '✗ Diverged' : 'Running…');
+
+    if (!converged && iter < maxIter && Math.abs(w) < 20) {
+      const grad = 2*w;
+      trail.push({w, j});
+      w = w - alpha * grad;
+      iter++;
+      lrAnimId = setTimeout(() => requestAnimationFrame(drawFrame), alpha < 0.05 ? 0 : 60);
+    }
+  }
+  drawFrame();
+}
+
+// ===================== LIVE DEMO =====================
+let demoW = 3.0, demoStep = 0, demoRunning = false, demoAnimId = null;
+
+function resetDemo() {
+  demoRunning = false;
+  if (demoAnimId) clearTimeout(demoAnimId);
+  demoStep = 0;
+  demoW = parseFloat(document.getElementById('startSlider').value);
+  document.getElementById('demoMsg').style.display = 'none';
+  document.getElementById('demoStep').textContent = 0;
+  document.getElementById('demoW').textContent = demoW.toFixed(4);
+  document.getElementById('demoCost').textContent = (demoW*demoW).toFixed(4);
+  document.getElementById('demoGrad').textContent = (2*demoW).toFixed(4);
+  drawDemoCanvas([]);
+}
+
+let demoTrail = [];
+
+function stepDemo() {
+  const alpha = parseFloat(document.getElementById('alphaSlider').value);
+  const grad = 2 * demoW;
+  demoTrail.push({w: demoW, j: demoW*demoW});
+  demoW = demoW - alpha * grad;
+  demoStep++;
+  document.getElementById('demoStep').textContent = demoStep;
+  document.getElementById('demoW').textContent = demoW.toFixed(4);
+  document.getElementById('demoCost').textContent = (demoW*demoW).toFixed(6);
+  document.getElementById('demoGrad').textContent = grad.toFixed(4);
+  drawDemoCanvas(demoTrail);
+
+  if (demoW*demoW < 0.00001) {
+    document.getElementById('demoMsg').style.display = 'block';
+  }
+}
+
+function runDemo() {
+  if (demoRunning) { demoRunning = false; return; }
+  demoRunning = true;
+  function tick() {
+    if (!demoRunning || demoW*demoW < 0.00001 || demoStep > 500) {
+      demoRunning = false;
+      if (demoW*demoW < 0.00001) document.getElementById('demoMsg').style.display = 'block';
+      return;
+    }
+    stepDemo();
+    demoAnimId = setTimeout(tick, 80);
+  }
+  tick();
+}
+
+function drawDemoCanvas(trail) {
+  const canvas = document.getElementById('demoCanvas');
+  if (!canvas) return;
+  canvas.width = canvas.offsetWidth * devicePixelRatio;
+  canvas.height = 300 * devicePixelRatio;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(devicePixelRatio, devicePixelRatio);
+  const W = canvas.offsetWidth, H = 300;
+  const cx = W/2, cy = H - 30, sx = 65, sy = 50;
+  const toX = w => cx + w * sx;
+  const toY = j => cy - j * sy;
+
+  ctx.fillStyle = '#161922'; ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle = '#2a3045'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(0,cy); ctx.lineTo(W,cy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx,0); ctx.lineTo(cx,H); ctx.stroke();
+  ctx.font = '11px IBM Plex Mono'; ctx.fillStyle = '#7a84a0';
+  ctx.fillText('w', W-18, cy-6);
+  ctx.fillText('J(w)=w²', cx+6, 18);
+
+  ctx.strokeStyle = '#4fffb0'; ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  for(let v=-4.5;v<=4.5;v+=0.02){
+    const x=toX(v), y=toY(v*v);
+    v<=-4.49?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+
+  // Trail dots and lines
+  if (trail.length > 0) {
+    ctx.strokeStyle = 'rgba(255,107,107,0.3)'; ctx.lineWidth = 1;
+    ctx.beginPath();
+    trail.forEach((pt,i) => {
+      const x=toX(pt.w), y=toY(pt.j);
+      i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+    });
+    ctx.lineTo(toX(demoW), toY(demoW*demoW));
+    ctx.stroke();
+
+    trail.forEach((pt, i) => {
+      ctx.beginPath(); ctx.arc(toX(pt.w), toY(pt.j), 3, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(255,107,107,${0.2 + 0.8*(i/trail.length)})`;
+      ctx.fill();
+    });
+  }
+
+  // Current point
+  const px = toX(demoW), py = toY(demoW*demoW);
+  ctx.beginPath(); ctx.arc(px, py, 8, 0, Math.PI*2);
+  ctx.fillStyle = '#ff6b6b'; ctx.fill();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Tangent / gradient indicator
+  if (demoStep > 0) {
+    const grad = 2*demoW;
+    const alpha = parseFloat(document.getElementById('alphaSlider').value);
+    const stepSize = alpha * grad;
+    const newW = demoW - stepSize;
+    ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 1.5;
+    ctx.setLineDash([4,3]);
+    ctx.beginPath();
+    ctx.moveTo(px, py);
+    ctx.lineTo(toX(newW), toY(newW*newW));
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+}
+
+// ===================== QUIZ =====================
+const quizData = [
+  {
+    q: "Gradient descent moves parameters in the direction that _____ the cost function.",
+    opts: ["maximises", "minimises", "stabilises", "randomises"],
+    correct: 1,
+    explanation: "Correct! We always move in the direction that reduces (minimises) the cost — which is opposite to the gradient direction."
+  },
+  {
+    q: "If the learning rate α is too large, what typically happens?",
+    opts: ["Convergence is very slow", "The algorithm finds the global minimum quickly", "The algorithm oscillates or diverges", "The gradient becomes zero immediately"],
+    correct: 2,
+    explanation: "Correct! A large α causes big steps that overshoot the minimum, leading to oscillation or divergence."
+  },
+  {
+    q: "The gradient ∇J at the current position tells us:",
+    opts: ["The value of the minimum", "The number of iterations needed", "The direction and steepness of steepest ascent", "The exact location of the minimum"],
+    correct: 2,
+    explanation: "Correct! The gradient points in the direction of steepest ascent. We subtract it to go downhill."
+  },
+  {
+    q: "In the update rule θ = θ − α·(∂J/∂θ), what does α represent?",
+    opts: ["The cost function value", "The learning rate — step size", "The number of data points", "The gradient direction"],
+    correct: 1,
+    explanation: "Correct! α (alpha) is the learning rate — it controls how large each update step is."
+  },
+  {
+    q: "When updating parameters m and b in linear regression, you should:",
+    opts: ["Update m first, then use the new m to update b", "Update both simultaneously using gradients from current values", "Update only m, since b is always 0", "Update whichever has the larger gradient first"],
+    correct: 1,
+    explanation: "Correct! Both parameters must be updated simultaneously — using gradients computed from the current (old) values of both parameters."
+  }
+];
+
+let quizAnswered = new Array(quizData.length).fill(false);
+
+function buildQuiz() {
+  const cont = document.getElementById('quizContainer');
+  cont.innerHTML = '';
+  quizData.forEach((item, qi) => {
+    const div = document.createElement('div');
+    div.className = 'card'; div.style.marginBottom = '1.5rem';
+    div.innerHTML = `
+      <p class="quiz-q"><span style="font-family:var(--mono);color:var(--accent);">Q${qi+1}.</span> ${item.q}</p>
+      <div class="quiz-opts">
+        ${item.opts.map((opt, oi) => `
+          <button class="quiz-opt" id="q${qi}o${oi}" onclick="answerQ(${qi},${oi})">${opt}</button>
+        `).join('')}
+      </div>
+      <div class="quiz-feedback" id="qfb${qi}"></div>
+    `;
+    cont.appendChild(div);
+  });
+}
+
+function answerQ(qi, oi) {
+  if (quizAnswered[qi]) return;
+  quizAnswered[qi] = true;
+  const item = quizData[qi];
+  const isCorrect = oi === item.correct;
+  document.querySelectorAll(`[id^="q${qi}o"]`).forEach((btn, i) => {
+    btn.disabled = true;
+    if (i === item.correct) btn.classList.add('correct');
+    else if (i === oi && !isCorrect) btn.classList.add('wrong');
+  });
+  const fb = document.getElementById('qfb'+qi);
+  fb.className = `quiz-feedback show ${isCorrect ? 'ok' : 'bad'}`;
+  fb.textContent = isCorrect ? '✓ ' + item.explanation : '✗ Not quite. ' + item.explanation;
+}
+
+buildQuiz();
+
+// ===================== INIT =====================
+window.addEventListener('resize', () => {
+  const visible = document.querySelector('section.visible');
+  if (!visible) return;
+  const id = visible.id;
+  if (id==='cost') drawCostCanvas();
+  if (id==='gradient') initGradCanvas();
+  if (id==='demo') drawDemoCanvas(demoTrail);
+});
+
+// Init progress
+document.getElementById('progressBar').style.width = (1/sections.length*100)+'%';
+</script>
+</body>
+</html>
